@@ -24,6 +24,9 @@ export default function Home() {
             Save and see your changes instantly.
           </li>
         </ol>
+        <h1 className="text-3xl text-red-600 font-bold underline">
+      Hello world!
+    </h1>
 
         <div className="flex gap-4 items-center flex-col sm:flex-row">
           <a
