@@ -7,6 +7,6 @@ const {
 
 router.get('/:id', getNotifications);
 
-router.patch('/read/:id', markAsRead);
+router.put('/read', markAsRead);
 
 module.exports = router;

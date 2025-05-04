@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { api, Task, User } from '@/utils/api';
+import { api, Task, User, UpdateTaskData } from '@/utils/api';
 import { useRouter } from 'next/navigation';
+import { useAppSelector } from '@/state/hooks';
 
 export default function TaskList() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -16,6 +17,7 @@ export default function TaskList() {
   const [createdTasks, setCreatedTasks] = useState<Task[]>([]);
   const [activeTab, setActiveTab] = useState<'assigned' | 'created'>('assigned');
   const router = useRouter();
+  const user = useAppSelector(state => state.user.user)
 
   const [newTask, setNewTask] = useState({
     title: '',
@@ -25,14 +27,6 @@ export default function TaskList() {
     assignedTo: '',
   });
 
-  const [editTask, setEditTask] = useState({
-    title: '',
-    description: '',
-    status: 'pending' as 'pending' | 'in-progress' | 'completed',
-    priority: 'medium' as 'low' | 'medium' | 'high',
-    dueDate: '',
-    assignedTo: '',
-  });
 
   useEffect(() => {
     fetchTasks();
@@ -41,12 +35,9 @@ export default function TaskList() {
 
 
   useEffect(() => {
-    const user = localStorage.getItem('user');
     if (tasks.length && user) {
-      const userId = JSON.parse(user)._id
-      console.log(userId)
-      const assigned = tasks.filter(task => task.assignedTo?._id === userId);
-      const created = tasks.filter(task => task.createdBy._id === userId);
+      const assigned = tasks.filter(task => task.assignedTo?._id === user._id);
+      const created = tasks.filter(task => task.createdBy._id === user._id);
       setAssignedTasks(assigned)
       setCreatedTasks(created)
     }
@@ -106,13 +97,18 @@ export default function TaskList() {
     }
   };
 
-  const handleUpdateTask = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedTask) return;
+  const handleUpdateTask = async (editTask: Task) => {
+    if (!user) return
+    console.log("editTask", editTask)
+    const { _id, ...updatedTask } = editTask
+
     try {
-      await api.tasks.update(selectedTask._id, editTask);
+      await api.tasks.update(_id, {
+        updatedBy: user._id,
+        ...updatedTask
+      } as UpdateTaskData);
       setShowEditModal(false);
-      fetchTasks();
+      await fetchTasks();
     } catch (error) {
       setError('Failed to update task');
       console.error('Failed to update task:', error);
@@ -123,7 +119,7 @@ export default function TaskList() {
     if (!confirm('Are you sure you want to delete this task?')) return;
     try {
       await api.tasks.delete(taskId);
-      fetchTasks();
+      await fetchTasks();
     } catch (error) {
       setError('Failed to delete task');
       console.error('Failed to delete task:', error);
@@ -132,14 +128,6 @@ export default function TaskList() {
 
   const openEditModal = (task: Task) => {
     setSelectedTask(task);
-    setEditTask({
-      title: task.title,
-      description: task.description,
-      status: task.status,
-      priority: task.priority,
-      dueDate: task.dueDate,
-      assignedTo: task.assignedTo?._id || '',
-    });
     setShowEditModal(true);
   };
 
@@ -195,7 +183,6 @@ export default function TaskList() {
                         value={newTask.description}
                         onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
                         className="w-full text-sm  px-3 py-2 bg-black/20 rounded"
-                        required
                       />
                     </div>
                     <div className="mb-4">
@@ -205,7 +192,6 @@ export default function TaskList() {
                         value={newTask.dueDate}
                         onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })}
                         className="w-full text-sm  px-3 py-2 bg-black/20 rounded"
-                        required
                       />
                     </div>
                     <div className="mb-4">
@@ -378,9 +364,10 @@ export default function TaskList() {
           </div>
           {(activeTab === 'assigned' ? assignedTasks : createdTasks).map((task) => (
             <TaskCard
+              users={users}
               key={task._id}
               task={task}
-              onEdit={() => openEditModal(task)}
+              handleUpdateTask={handleUpdateTask}
               onDelete={() => handleDeleteTask(task._id)}
             />
           ))}
@@ -428,12 +415,19 @@ export default function TaskList() {
 }
 
 // Updated TaskCard component
-function TaskCard({ task, onEdit, onDelete }: { task: Task; onEdit: () => void; onDelete: () => void }) {
+function TaskCard({ task, onDelete, users, handleUpdateTask }: {
+  task: Task;
+  onDelete: () => void;
+  users: User[]
+  handleUpdateTask: (task: Task) => Promise<void>
+}
+) {
 
   const [editingStatus, setEditingStatus] = useState(false);
   const [editingPriority, setEditingPrority] = useState(false);
   const [editingDueDate, setEditingDueDate] = useState(false)
   const [editedTask, setEditedTask] = useState(task);
+  const [editingAssignee, setEditingAssignee] = useState(false)
 
   const dateInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -444,21 +438,48 @@ function TaskCard({ task, onEdit, onDelete }: { task: Task; onEdit: () => void; 
     }
   }, [editingDueDate]);
 
-  const handleStatusChange = (status: "pending" | "in-progress" | "completed") => {
-    setEditedTask({
+  const handleStatusChange = async (status: "pending" | "in-progress" | "completed") => {
+
+    const updatedTask = {
       ...editedTask,
       status
-    })
+    }
+    setEditedTask(updatedTask)
     setEditingStatus(false);
+    try {
+      await handleUpdateTask(updatedTask)
+    } catch (err) {
+      console.log("error udating taks", err)
+    }
+
   };
 
 
-  const handlePriorityChange = (priority: "low" | "medium" | "high") => {
-    setEditedTask({
+  const handlePriorityChange = async (priority: "low" | "medium" | "high") => {
+    const updatedTask = {
       ...editedTask,
       priority
-    })
+    }
+    setEditedTask(updatedTask)
     setEditingPrority(false);
+
+    try {
+      await handleUpdateTask(editedTask)
+    } catch (err) {
+      console.log("error udating taks", err)
+    }
+  };
+
+
+  const handleAssingeeChange = async (assignedTo: User) => {
+    setEditedTask(prev => ({ ...prev, assignedTo }));
+    setEditingAssignee(false)
+
+    try {
+      await handleUpdateTask(editedTask)
+    } catch (err) {
+      console.log("error upading assigne", err)
+    }
   };
 
   const handleDueDateChange = (newDate: string) => {
@@ -574,7 +595,7 @@ function TaskCard({ task, onEdit, onDelete }: { task: Task; onEdit: () => void; 
 
         {/* Due Date */}
         <div className="relative flex text-sm font-semibold space-x-2">
-          {editingDueDate ? (
+          {editingDueDate && (
             <input
               ref={dateInputRef}
               type="date"
@@ -584,21 +605,43 @@ function TaskCard({ task, onEdit, onDelete }: { task: Task; onEdit: () => void; 
               className="absolute top-full mt-1 px-2 py-1 rounded-md border border-gray-300 shadow-md text-sm z-50"
               autoFocus
             />
-          ) : (
-            <span
-              onClick={() => setEditingDueDate(true)}
-              className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 cursor-pointer hover:bg-blue-200 transition"
-            >
-              {new Date(editedTask.dueDate).toLocaleDateString() || "Set due date"}
-            </span>
           )}
+          <span
+            onClick={() => setEditingDueDate(true)}
+            className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 cursor-pointer hover:bg-blue-200 transition"
+          >
+            {new Date(editedTask.dueDate).toLocaleDateString() || "Set due date"}
+          </span>
+
         </div>
+
         {/* Assignee */}
-        <div className="flex items-center text-sm text-gray-500">
-          <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="flex relative items-center text-sm text-gray-500">
+          {
+            editingAssignee && (
+              <div className='absolute z-50 bg-white top-full text-gray-800 rounded-md shadow-lg mt-1 w-full'>
+
+                {
+                  users.map(user => (
+                    <span
+                      key={user._id}
+                      onClick={() => handleAssingeeChange(user)}
+                      className='my-2 block hover:bg-green-50'
+                    >
+                      {user.name}
+                    </span>
+                  ))
+                }
+              </div>
+
+            )
+          }
+          <svg
+            onClick={() => setEditingAssignee(true)}
+            className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
-          {task.assignedTo?.name || 'Unassigned'}
+          {editedTask.assignedTo?.name || 'Unassigned'}
         </div>
       </div>
     </div>

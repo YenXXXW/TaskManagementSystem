@@ -8,7 +8,9 @@ import { connectSocket } from '@/state/socketSlice';
 import { api } from '@/utils/api';
 import { BellIcon } from '@heroicons/react/24/outline';
 import { addNotification } from '@/state/socketSlice';
-import { Noti } from '@/state/socketSlice';
+import { useRef } from 'react';
+import { Notification } from '@/utils/api';
+import NotiCard from '@/components/NotiCard';
 
 export default function DashboardLayout({
   children,
@@ -17,24 +19,65 @@ export default function DashboardLayout({
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [userName, setUserName] = useState('');
-  const [notfications, setNotifications] = useState<Noti[]>([])
+  const [notfications, setNotifications] = useState<Notification[]>([])
+  const [showNotiView, setShowNotiView] = useState(false)
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const [unreadNotis, setUnradNotis] = useState<string[]>([])
 
   const liveNoti = useAppSelector(state => state.socket.notifications)
 
+  const notiRef = useRef<HTMLDivElement | null>(null)
+
   useEffect(() => {
-    setNotifications([...liveNoti])
+    const sortedNotis = [...liveNoti].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+    setNotifications([...sortedNotis])
+    const unreadIds = sortedNotis.flatMap(noti => !noti.isRead ? [noti._id] : []);
+    console.log("upadate in the liveNoti", unreadNotis)
+    setUnradNotis(unreadIds)
 
   }, [liveNoti])
 
   const getNotifications = async (userId: string) => {
-
     const notis = await api.notis.getAll(userId)
     dispatch(addNotification(notis))
     setNotifications(notis)
+    console.log(notis)
+
+    const unreadIds = notfications.flatMap(noti => !noti.isRead ? [noti._id] : []);
+    setUnradNotis(unreadIds)
 
   }
+
+  const handleNotiRead = async () => {
+
+    try {
+      if (unreadNotis.length) {
+        await api.notis.markRead({ ids: unreadNotis })
+        const updateNotis = notfications.map(noti => ({
+          ...noti,
+          isRead: true
+        }))
+        setNotifications(updateNotis)
+        setUnradNotis([])
+      }
+    } catch (error) {
+      console.log("error updatig notifications", error)
+    }
+  }
+
+
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (notiRef.current && !notiRef.current.contains(event.target as Node)) {
+        setShowNotiView(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
 
@@ -51,6 +94,7 @@ export default function DashboardLayout({
       }
     }
   }, []);
+
 
 
   const handleLogout = () => {
@@ -128,19 +172,45 @@ export default function DashboardLayout({
         {/* Page Content */}
         <main className="p-6">
           <div className="flex justify-end">
-            <div className="relative">
+            <div className="relative hover:bg-blue-200 cursor-pointer rounded-full w-10 h-10 flex items-center justify-center"
+              onClick={async () => {
+                setShowNotiView(!showNotiView)
+
+                await handleNotiRead()
+              }
+              }>
               <BellIcon className="h-6 w-6 text-blue-500" />
 
-              {notfications && notfications.length > 0 && (
+              {unreadNotis.length > 0 && (
                 <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
-                  {notfications.length}
+                  {unreadNotis.length}
                 </span>
               )}
+              {
+                showNotiView &&
+
+                <div
+                  ref={notiRef}
+                  className='absolute p-6 rounded-md z-30 bg-white top-full right-0 w-[400px] max-h-[400px] overflow-y-auto'
+                >
+                  <h3 className='font-bold text-2xl mb-4'>Nofitcations</h3>
+                  <div className='flex flex-col gap-2'>
+                    {
+
+                      notfications.map((noti, i) => (
+                        <div key={i}>
+                          <NotiCard notifiation={noti} />
+                        </div>
+                      ))
+                    }
+                  </div>
+                </div>
+              }
             </div>
           </div>
           {children}
         </main>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 } 

@@ -40,6 +40,7 @@ export interface CreateTaskData {
 }
 
 export interface UpdateTaskData {
+  updatedBy: string;
   title?: string;
   description?: string;
   status?: 'pending' | 'in-progress' | 'completed';
@@ -69,6 +70,11 @@ export interface Notification {
   };
   isRead: boolean;
   createdAt: string;
+  createdBy: User
+}
+
+export interface NotiUpdateData {
+  ids: string[]
 }
 
 export const api = {
@@ -116,7 +122,10 @@ export const api = {
   },
 
   notis: {
-    getAll: (userId: string) => api.request<Notification[]>(`/notifications/${userId}`)
+    getAll: (userId: string) => api.request<Notification[]>(`/notifications/${userId}`),
+    markRead: (data: NotiUpdateData) => api.request<Notification[]>(`/notifications/read`, {
+      method: 'PUT', body: data
+    }),
   }
 
 }; 

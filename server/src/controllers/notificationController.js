@@ -36,32 +36,35 @@ exports.getNotifications = async (req, res) => {
     const notifications = await Notification.find({ user: userId })
       .sort({ createdAt: -1 })
       .populate('task', 'title')
+      .populate('createdBy', 'name _id email')
       .exec();
 
+    console.log("notifcation", notifications)
     res.status(200).json(notifications);
   } catch (err) {
     console.error('Error fetching notifications:', err);
     res.status(500).json({ message: 'Fetching notifications failed' });
   }
 };
-
 exports.markAsRead = async (req, res) => {
   try {
-    const notificationId = req.params.id;
+    const { ids } = req.body;
 
-
-    if (!notificationId) {
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({
-        message: 'Missing required field: id',
+        message: 'Missing or invalid required field: ids',
       });
     }
 
-    await Notification.findByIdAndUpdate(notificationId, { isRead: true });
+    await Notification.updateMany(
+      { _id: { $in: ids } },
+      { $set: { isRead: true } }
+    );
 
-    res.status(200).json({ message: 'Notification marked as read' });
+    res.status(200).json({ message: 'Notifications marked as read' });
   } catch (err) {
-    console.error('Error marking notification as read:', err);
-    res.status(500).json({ message: 'Failed to mark notification as read' });
+    console.error('Error marking notifications as read:', err);
+    res.status(500).json({ message: 'Failed to mark notifications as read' });
   }
 };
-;
+

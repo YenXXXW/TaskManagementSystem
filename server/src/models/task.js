@@ -9,7 +9,6 @@ const taskSchema = new mongoose.Schema({
   },
   description: {
     type: String,
-    required: [true, 'Description is required'],
     trim: true,
   },
   status: {
@@ -24,7 +23,7 @@ const taskSchema = new mongoose.Schema({
   },
   dueDate: {
     type: Date,
-    required: [true, 'Due date is required'],
+    default: new Date(Date.now()) * 7 * 24 * 60 * 60 * 1000,
   },
   assignedTo: {
     type: mongoose.Schema.Types.ObjectId,

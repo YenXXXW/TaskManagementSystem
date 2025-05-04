@@ -3,16 +3,12 @@ import { getSocket } from '../utils/socket';
 import { AppDispatch } from './store';
 import { Notification } from '@/utils/api';
 
-interface LiveNotification {
-  message: string;
-  timestamp: string;
-}
 
-export type Noti = LiveNotification | Notification
+
 
 interface SocketState {
   connected: boolean;
-  notifications: Noti[];
+  notifications: Notification[];
 }
 
 const initialState: SocketState = {
@@ -27,7 +23,7 @@ const socketSlice = createSlice({
     setConnected: (state, action: PayloadAction<boolean>) => {
       state.connected = action.payload;
     },
-    addNotification: (state, action: PayloadAction<Noti[]>) => {
+    addNotification: (state, action: PayloadAction<Notification[]>) => {
       state.notifications.push(...action.payload);
     },
     clearNotifications: (state) => {
@@ -52,18 +48,13 @@ export const connectSocket = (userId: string) => (dispatch: AppDispatch) => {
     socket.emit('register', userId);
     dispatch(setConnected(true));
 
-    socket.on('taskAssigned', (message: string) => {
-      dispatch(addNotification([{
-        message,
-        timestamp: new Date().toISOString(),
-      }]));
+    socket.on('taskAssigned', (message: Notification) => {
+      console.log("taskAssigend", message)
+      dispatch(addNotification([message]));
     });
 
-    socket.on('taskUpdated', (message: string) => {
-      dispatch(addNotification([{
-        message,
-        timestamp: new Date().toISOString(),
-      }]));
+    socket.on('taskUpdated', (message: Notification) => {
+      dispatch(addNotification([message]));
     });
   }
 };

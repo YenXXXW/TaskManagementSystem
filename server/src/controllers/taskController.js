@@ -52,27 +52,32 @@ exports.getTask = async (req, res) => {
 // Create a new task
 exports.createTask = async (req, res) => {
   try {
-    const { title, description, dueDate, priority, assignedTo } = req.body;
+    const { title, status, description, dueDate, priority, assignedTo } = req.body;
 
-    if (!title || !description || !dueDate || !priority || !assignedTo) {
+    if (!title) {
       return res.status(400).json({
-        message: 'Missing required field: title, description deuDate, priority, assignedTo',
+        message: 'Missing required field: title',
       });
     }
 
-    const assignedUser = await User.findById(assignedTo);
-    if (!assignedUser) {
-      return res.status(400).json({ message: 'Assigned user not found' });
-    }
-
-    const task = new Task({
+    let task = new Task({
       title,
       description,
-      dueDate,
+      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       priority: priority || 'medium',
-      assignedTo,
-      createdBy: req.user._id
+      status: status || 'pending',
+      createdBy: req.user._id,
     });
+
+    let assignedUser = null;
+    if (assignedTo && assignedTo.trim() !== '') {
+      assignedUser = await User.findById(assignedTo);
+      if (!assignedUser) {
+        return res.status(400).json({ message: 'Assigned user not found' });
+      }
+      task.assignedTo = assignedTo;
+    }
+
 
     await task.save();
 
@@ -86,15 +91,19 @@ exports.createTask = async (req, res) => {
         type: 'taskAssigned',
         message: `${req.user.name} assigned you a new task.`,
         task: task._id,
+        createdBy: req.user._id,
       });
       await notification.save();
 
+      const populatedNotification = await Notification.findById(notification._id).populate('createdBy');
+
       const io = getIO();
       io.to(assignedUser._id.toString()).emit('taskAssigned', {
-        message: notification.message,
+        message: populatedNotification.message,
         task: populatedTask,
-        notificationId: notification._id,
-        createdAt: notification.createdAt,
+        notificationId: populatedNotification._id,
+        createdAt: populatedNotification.createdAt,
+        createdBy: populatedNotification.createdBy,
       });
     }
 
@@ -144,17 +153,40 @@ exports.updateTask = async (req, res) => {
       .populate('createdBy', 'name email')
       .populate('assignedTo', 'name email');
 
-    res.json(updatedTask);
 
-    const io = getIO();
-    const notifyUserId = updatedTask.assignedTo?._id?.toString();
+    const assigneeId = updatedTask.assignedTo?._id?.toString();
+    const taskCreatorId = updatedTask.createdBy?._id?.toString();
+
+    console.log("assigneeId", assigneeId)
+    console.log("taskCreatorId", taskCreatorId)
+
+    const notifyUserId = req.user._id.toString() === assigneeId ? taskCreatorId : assigneeId
+
+    console.log("notifyUserId", notifyUserId)
 
     if (notifyUserId) {
-      io.to(notifyUserId).emit('taskUpdated', {
-        message: `${req.user.name} updated a task assigned to you.`,
+      const notification = new Notification({
+        user: notifyUserId,
+        type: 'taskUpdated',
+        message: `${req.user.name} updated task.`,
+        task: task._id,
+        createdBy: req.user._id
+      });
+      await notification.save();
+
+      const populatedNotification = await Notification.findById(notification._id).populate('createdBy');
+
+      const io = getIO()
+      io.to(notifyUserId).emit('taskAssigned', {
+        message: populatedNotification.message,
         task: updatedTask,
+        notificationId: populatedNotification._id,
+        createdAt: populatedNotification.createdAt,
+        createdBy: populatedNotification.createdBy,
       });
     }
+
+    res.status(200).json(updatedTask);
 
   } catch (error) {
     console.error('Error updating task:', error);
