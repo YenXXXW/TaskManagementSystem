@@ -18,10 +18,12 @@ app.use(express.urlencoded({ extended: true }));
 const taskRoutes = require('./routes/taskRoutes');
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
+const notiRoutes = require('./routes/notificationRoutes')
 
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/tasks', protect, taskRoutes);
 app.use('/api/users', protect, userRoutes);
+app.use('/api/notifications', protect, notiRoutes);
 
 module.exports = app; 

@@ -59,6 +59,18 @@ export interface RegisterData {
   password: string;
 }
 
+export interface Notification {
+  _id: string;
+  type: 'taskUpdated' | 'taskAssigned' | 'taskCommented';
+  message: string;
+  task?: {
+    _id: string;
+    title: string;
+  };
+  isRead: boolean;
+  createdAt: string;
+}
+
 export const api = {
   async request<T>(endpoint: string, config: ApiConfig = {}): Promise<T> {
     const token = localStorage.getItem('token');
@@ -84,7 +96,6 @@ export const api = {
     return response.json();
   },
 
-  // Task endpoints
   tasks: {
     getAll: () => api.request<Task[]>('/tasks'),
     getById: (id: string) => api.request<Task>(`/tasks/${id}`),
@@ -95,14 +106,17 @@ export const api = {
     getByPriority: (priority: string) => api.request<Task[]>(`/tasks/priority/${priority}`),
   },
 
-  // Auth endpoints
   auth: {
     login: (data: LoginData) => api.request<{ token: string; user: { _id: string; name: string; email: string } }>('/auth/login', { method: 'POST', body: data }),
     register: (data: RegisterData) => api.request<{ token: string; user: { _id: string; name: string; email: string } }>('/auth/register', { method: 'POST', body: data }),
   },
 
-  // User endpoints
   users: {
     getAll: () => api.request<User[]>('/users'),
   },
+
+  notis: {
+    getAll: (userId: string) => api.request<Notification[]>(`/notifications/${userId}`)
+  }
+
 }; 

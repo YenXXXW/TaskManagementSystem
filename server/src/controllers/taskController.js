@@ -1,5 +1,7 @@
 const Task = require('../models/task');
 const User = require('../models/user');
+const Notification = require('../models/notificaton')
+const { getIO } = require('../../config/socket')
 
 // Get all tasks for the authenticated user
 exports.getTasks = async (req, res) => {
@@ -10,9 +12,9 @@ exports.getTasks = async (req, res) => {
         { assignedTo: req.user._id }
       ]
     })
-    .populate('createdBy', 'name email')
-    .populate('assignedTo', 'name email')
-    .sort({ createdAt: -1 });
+      .populate('createdBy', 'name email')
+      .populate('assignedTo', 'name email')
+      .sort({ createdAt: -1 });
 
     res.json(tasks);
   } catch (error) {
@@ -33,8 +35,8 @@ exports.getTask = async (req, res) => {
     }
 
     // Check if user has access to the task
-    const hasAccess = task.createdBy.equals(req.user._id) || 
-                     task.assignedTo?.equals(req.user._id);
+    const hasAccess = task.createdBy.equals(req.user._id) ||
+      task.assignedTo?.equals(req.user._id);
 
     if (!hasAccess) {
       return res.status(403).json({ message: 'Not authorized to access this task' });
@@ -52,12 +54,15 @@ exports.createTask = async (req, res) => {
   try {
     const { title, description, dueDate, priority, assignedTo } = req.body;
 
-    // Validate assigned user if provided
-    if (assignedTo) {
-      const assignedUser = await User.findById(assignedTo);
-      if (!assignedUser) {
-        return res.status(400).json({ message: 'Assigned user not found' });
-      }
+    if (!title || !description || !dueDate || !priority || !assignedTo) {
+      return res.status(400).json({
+        message: 'Missing required field: title, description deuDate, priority, assignedTo',
+      });
+    }
+
+    const assignedUser = await User.findById(assignedTo);
+    if (!assignedUser) {
+      return res.status(400).json({ message: 'Assigned user not found' });
     }
 
     const task = new Task({
@@ -70,10 +75,28 @@ exports.createTask = async (req, res) => {
     });
 
     await task.save();
-    
+
     const populatedTask = await Task.findById(task._id)
       .populate('createdBy', 'name email')
       .populate('assignedTo', 'name email');
+
+    if (assignedUser) {
+      const notification = new Notification({
+        user: assignedUser._id,
+        type: 'taskAssigned',
+        message: `${req.user.name} assigned you a new task.`,
+        task: task._id,
+      });
+      await notification.save();
+
+      const io = getIO();
+      io.to(assignedUser._id.toString()).emit('taskAssigned', {
+        message: notification.message,
+        task: populatedTask,
+        notificationId: notification._id,
+        createdAt: notification.createdAt,
+      });
+    }
 
     res.status(201).json(populatedTask);
   } catch (error) {
@@ -87,14 +110,15 @@ exports.updateTask = async (req, res) => {
   try {
     const { title, description, status, priority, dueDate, assignedTo } = req.body;
 
+
     const task = await Task.findById(req.params.id);
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
     }
 
     // Check if user has permission to update the task
-    const hasPermission = task.createdBy.equals(req.user._id) || 
-                         task.assignedTo?.equals(req.user._id);
+    const hasPermission = task.createdBy.equals(req.user._id) ||
+      task.assignedTo?.equals(req.user._id);
 
     if (!hasPermission) {
       return res.status(403).json({ message: 'Not authorized to update this task' });
@@ -115,12 +139,23 @@ exports.updateTask = async (req, res) => {
     }
 
     await task.save();
-    
+
     const updatedTask = await Task.findById(task._id)
       .populate('createdBy', 'name email')
       .populate('assignedTo', 'name email');
 
     res.json(updatedTask);
+
+    const io = getIO();
+    const notifyUserId = updatedTask.assignedTo?._id?.toString();
+
+    if (notifyUserId) {
+      io.to(notifyUserId).emit('taskUpdated', {
+        message: `${req.user.name} updated a task assigned to you.`,
+        task: updatedTask,
+      });
+    }
+
   } catch (error) {
     console.error('Error updating task:', error);
     res.status(500).json({ message: 'Error updating task' });
@@ -159,9 +194,9 @@ exports.getTasksByStatus = async (req, res) => {
         { assignedTo: req.user._id }
       ]
     })
-    .populate('createdBy', 'name email')
-    .populate('assignedTo', 'name email')
-    .sort({ createdAt: -1 });
+      .populate('createdBy', 'name email')
+      .populate('assignedTo', 'name email')
+      .sort({ createdAt: -1 });
 
     res.json(tasks);
   } catch (error) {
@@ -181,9 +216,9 @@ exports.getTasksByPriority = async (req, res) => {
         { assignedTo: req.user._id }
       ]
     })
-    .populate('createdBy', 'name email')
-    .populate('assignedTo', 'name email')
-    .sort({ createdAt: -1 });
+      .populate('createdBy', 'name email')
+      .populate('assignedTo', 'name email')
+      .sort({ createdAt: -1 });
 
     res.json(tasks);
   } catch (error) {

@@ -1,34 +1,38 @@
-const express = require('express');
-const cors = require('cors');
 require('dotenv').config();
 
+const http = require('http');
 const connectDB = require('../config/db');
 const configureMorgan = require('../config/log');
+const { createSocketServer } = require('../config/socket');
+const handleSocketEvents = require('./controllers/socketController')
 const app = require('./app');
 
-// Connect to MongoDB
 connectDB();
-
 configureMorgan(app);
+const server = http.createServer(app);
+const io = createSocketServer(server);
 
-app.get('/', (req, res) => {
+io.on('connection', (socket) => {
+  handleSocketEvents(socket);
+});
+
+
+app.get('/', (_, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.status(200).json({ message: 'Welcome to Task Management System API' });
 });
 
-// Catch-all route for unhandled requests
-app.use((req, res) => {
+app.use((_, res) => {
   res.status(404).json({ message: 'Route not found' });
 });
 
-// Error handling middleware
-app.use((err, req, res, next) => {
+app.use((err, _, res) => {
   console.error(err.stack);
   res.status(500).json({ message: 'Something went wrong!' });
 });
 
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
 

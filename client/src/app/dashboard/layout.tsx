@@ -2,7 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useAppDispatch, useAppSelector } from "../../state/hooks";
 import { useRouter } from 'next/navigation';
+import { connectSocket } from '@/state/socketSlice';
+import { api } from '@/utils/api';
+import { BellIcon } from '@heroicons/react/24/outline';
+import { addNotification } from '@/state/socketSlice';
+import { Noti } from '@/state/socketSlice';
 
 export default function DashboardLayout({
   children,
@@ -11,19 +17,41 @@ export default function DashboardLayout({
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [userName, setUserName] = useState('');
+  const [notfications, setNotifications] = useState<Noti[]>([])
   const router = useRouter();
+  const dispatch = useAppDispatch();
+
+  const liveNoti = useAppSelector(state => state.socket.notifications)
 
   useEffect(() => {
+    setNotifications([...liveNoti])
+
+  }, [liveNoti])
+
+  const getNotifications = async (userId: string) => {
+
+    const notis = await api.notis.getAll(userId)
+    dispatch(addNotification(notis))
+    setNotifications(notis)
+
+  }
+
+  useEffect(() => {
+
     const user = localStorage.getItem('user');
     if (user) {
       try {
         const parsedUser = JSON.parse(user);
+        dispatch(connectSocket(parsedUser._id))
         setUserName(parsedUser.name || '');
+        getNotifications(parsedUser._id)
+
       } catch (error) {
         console.error('Error parsing user data:', error);
       }
     }
   }, []);
+
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -99,6 +127,17 @@ export default function DashboardLayout({
 
         {/* Page Content */}
         <main className="p-6">
+          <div className="flex justify-end">
+            <div className="relative">
+              <BellIcon className="h-6 w-6 text-blue-500" />
+
+              {notfications && notfications.length > 0 && (
+                <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
+                  {notfications.length}
+                </span>
+              )}
+            </div>
+          </div>
           {children}
         </main>
       </div>
