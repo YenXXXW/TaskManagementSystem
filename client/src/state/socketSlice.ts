@@ -24,7 +24,7 @@ const socketSlice = createSlice({
       state.connected = action.payload;
     },
     addNotification: (state, action: PayloadAction<Notification[]>) => {
-      state.notifications.push(...action.payload);
+      state.notifications.unshift(...action.payload);
     },
     clearNotifications: (state) => {
       state.notifications = [];

@@ -34,12 +34,11 @@ exports.getNotifications = async (req, res) => {
     }
 
     const notifications = await Notification.find({ user: userId })
-      .sort({ createdAt: -1 })
       .populate('task', 'title')
       .populate('createdBy', 'name _id email')
+      .sort({ createdAt: -1 })
       .exec();
 
-    console.log("notifcation", notifications)
     res.status(200).json(notifications);
   } catch (err) {
     console.error('Error fetching notifications:', err);

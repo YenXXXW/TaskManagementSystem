@@ -17,7 +17,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [userName, setUserName] = useState('');
   const [notfications, setNotifications] = useState<Notification[]>([])
   const [showNotiView, setShowNotiView] = useState(false)
@@ -30,10 +30,8 @@ export default function DashboardLayout({
   const notiRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
-    const sortedNotis = [...liveNoti].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-    setNotifications([...sortedNotis])
-    const unreadIds = sortedNotis.flatMap(noti => !noti.isRead ? [noti._id] : []);
-    console.log("upadate in the liveNoti", unreadNotis)
+    setNotifications([...liveNoti])
+    const unreadIds = liveNoti.flatMap(noti => !noti.isRead ? [noti._id] : []);
     setUnradNotis(unreadIds)
 
   }, [liveNoti])
@@ -189,6 +187,7 @@ export default function DashboardLayout({
               {
                 showNotiView &&
 
+
                 <div
                   ref={notiRef}
                   className='absolute p-6 rounded-md z-30 bg-white top-full right-0 w-[400px] max-h-[400px] overflow-y-auto'
@@ -197,11 +196,16 @@ export default function DashboardLayout({
                   <div className='flex flex-col gap-2'>
                     {
 
-                      notfications.map((noti, i) => (
-                        <div key={i}>
-                          <NotiCard notifiation={noti} />
-                        </div>
-                      ))
+                      notfications.length > 0 ?
+                        notfications.map((noti, i) => (
+                          <div key={i}>
+                            <NotiCard notifiation={noti} />
+                          </div>
+                        ))
+                        :
+                        <p>
+                          no notifications
+                        </p>
                     }
                   </div>
                 </div>

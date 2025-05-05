@@ -35,8 +35,13 @@ export interface CreateTaskData {
   title: string;
   description: string;
   dueDate: string;
-  priority?: 'low' | 'medium' | 'high';
+  status: 'pending' | 'in-progress' | 'completed'
+  priority: 'low' | 'medium' | 'high';
   assignedTo?: string;
+}
+
+export interface DeleteTasksData {
+  ids: string[]
 }
 
 export interface UpdateTaskData {
@@ -107,7 +112,7 @@ export const api = {
     getById: (id: string) => api.request<Task>(`/tasks/${id}`),
     create: (data: CreateTaskData) => api.request<Task>('/tasks', { method: 'POST', body: data }),
     update: (id: string, data: UpdateTaskData) => api.request<Task>(`/tasks/${id}`, { method: 'PUT', body: data }),
-    delete: (id: string) => api.request<{ message: string }>(`/tasks/${id}`, { method: 'DELETE' }),
+    delete: (data: DeleteTasksData) => api.request<{ message: string }>(`/tasks/delete`, { method: 'POST', body: data }),
     getByStatus: (status: string) => api.request<Task[]>(`/tasks/status/${status}`),
     getByPriority: (priority: string) => api.request<Task[]>(`/tasks/priority/${priority}`),
   },

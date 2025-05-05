@@ -100,6 +100,7 @@ exports.createTask = async (req, res) => {
       const io = getIO();
       io.to(assignedUser._id.toString()).emit('taskAssigned', {
         message: populatedNotification.message,
+        type: "taskAssigned",
         task: populatedTask,
         notificationId: populatedNotification._id,
         createdAt: populatedNotification.createdAt,
@@ -177,7 +178,8 @@ exports.updateTask = async (req, res) => {
       const populatedNotification = await Notification.findById(notification._id).populate('createdBy');
 
       const io = getIO()
-      io.to(notifyUserId).emit('taskAssigned', {
+      io.to(notifyUserId).emit('taskUpdated', {
+        type: "taskUpdated",
         message: populatedNotification.message,
         task: updatedTask,
         notificationId: populatedNotification._id,
@@ -191,27 +193,6 @@ exports.updateTask = async (req, res) => {
   } catch (error) {
     console.error('Error updating task:', error);
     res.status(500).json({ message: 'Error updating task' });
-  }
-};
-
-// Delete a task
-exports.deleteTask = async (req, res) => {
-  try {
-    const task = await Task.findById(req.params.id);
-    if (!task) {
-      return res.status(404).json({ message: 'Task not found' });
-    }
-
-    // Only allow task creator to delete
-    if (!task.createdBy.equals(req.user._id)) {
-      return res.status(403).json({ message: 'Not authorized to delete this task' });
-    }
-
-    await task.deleteOne();
-    res.json({ message: 'Task deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting task:', error);
-    res.status(500).json({ message: 'Error deleting task' });
   }
 };
 
@@ -257,4 +238,69 @@ exports.getTasksByPriority = async (req, res) => {
     console.error('Error fetching tasks by priority:', error);
     res.status(500).json({ message: 'Error fetching tasks by priority' });
   }
-}; 
+};
+
+
+// Delete a task
+exports.deleteTask = async (req, res) => {
+  try {
+    const { ids } = req.body
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: 'No task IDs provided' });
+    }
+
+    const tasks = await Task.find({ _id: { $in: ids } }).populate('createdBy', 'name');
+
+    if (tasks.length !== ids.length) {
+      return res.status(404).json({ message: 'One or more tasks not found' });
+    }
+
+    // check if all the tasks are created by user 
+    const unauthorizedTasks = tasks.filter(task => !task.createdBy._id.equals(req.user._id));
+    if (unauthorizedTasks.length > 0) {
+      return res.status(403).json({ message: 'You are not authorized to delete one or more tasks' });
+    }
+
+    await Task.deleteMany({ _id: { $in: ids } });
+
+
+
+    //const assignedUser = task.assignedTo;
+
+    // Save task ID for notification before deletion
+    //const deletedTaskId = task._id;
+
+
+    {/*  
+    // Notify the assigned user if they exist
+    if (assignedUser) {
+      const notification = new Notification({
+        user: assignedUser._id,
+        type: 'taskDeleted',
+        message: `${req.user.name} deleted a task you were assigned to.`,
+        task,
+        createdBy: req.user._id,
+      });
+
+      await notification.save();
+
+      const populatedNotification = await Notification.findById(notification._id).populate('createdBy');
+      const io = getIO();
+      io.to(assignedUser._id.toString()).emit('taskDeleted', {
+        type: 'taskDeleted',
+        message: populatedNotification.message,
+        taskId: deletedTaskId,
+        notificationId: populatedNotification._id,
+        createdAt: populatedNotification.createdAt,
+        createdBy: populatedNotification.createdBy,
+      });
+      
+    }
+*/}
+    res.json({ message: 'Task deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting task:', error);
+    res.status(500).json({ message: 'Error deleting task' });
+  }
+};

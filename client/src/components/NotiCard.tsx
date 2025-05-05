@@ -22,7 +22,7 @@ function NotiCard({ notifiation }: { notifiation: Notification }) {
             <span className="font-semibold ">{notifiation.createdBy.name}&nbsp;</span>
             <span>{getMessage(notifiation.type)}</span>
           </p>
-          <p className="text-blue-600 underline text-sm">{notifiation.task?.title}</p>
+          <p className={`${notifiation.task?.title ? "text-blue-600" : "text-red-500"} underline text-sm`}>{notifiation.task?.title || "task is deleted"}</p>
         </div>
       </div>
     </div>
