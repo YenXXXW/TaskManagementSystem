@@ -26,6 +26,7 @@ export default function LoginPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData),
+        credentials: 'include'
       });
 
       const data = await response.json();
@@ -34,10 +35,11 @@ export default function LoginPage() {
         throw new Error(data.message || 'Login failed');
       }
 
+
       // Store token in localStorage
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.data.user));
-      
+
       // Redirect to dashboard
       router.push('/dashboard');
     } catch (err) {

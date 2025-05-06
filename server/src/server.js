@@ -5,6 +5,8 @@ const connectDB = require('../config/db');
 const configureMorgan = require('../config/log');
 const { createSocketServer } = require('../config/socket');
 const handleSocketEvents = require('./controllers/socketController')
+const cookieParser = require('cookie-parser');
+
 const app = require('./app');
 
 connectDB();
@@ -16,8 +18,10 @@ io.on('connection', (socket) => {
   handleSocketEvents(socket);
 });
 
+app.use(cookieParser());
 
-app.get('/', (_, res) => {
+app.get('/api', (req, res) => {
+  console.log(req.cookies)
   res.setHeader('Content-Type', 'application/json');
   res.status(200).json({ message: 'Welcome to Task Management System API' });
 });

@@ -4,14 +4,14 @@ const User = require('../models/user');
 exports.protect = async (req, res, next) => {
   try {
     let token;
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-      token = req.headers.authorization.split(' ')[1];
+    if (req.cookies && req.cookies.token) {
+      token = req.cookies.token;
     }
 
     if (!token) {
       return res.status(401).json({
         status: 'error',
-        message: 'You are not logged in! Please log in to get access.'
+        message: 'You are not logged in!!! Please log in to get access.'
       });
     }
 
@@ -33,4 +33,5 @@ exports.protect = async (req, res, next) => {
       message: 'Invalid token. Please log in again!'
     });
   }
-}; 
+};
+; 

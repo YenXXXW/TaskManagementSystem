@@ -1,16 +1,19 @@
 const express = require('express');
 const cors = require('cors');
 const { protect } = require('./middleware/auth');
-
 const app = express();
+
+const cookieParser = require('cookie-parser');
 
 // Middleware setup
 app.use(cors({
-  origin: '*',
+  origin: 'http://localhost:3000',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
 
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

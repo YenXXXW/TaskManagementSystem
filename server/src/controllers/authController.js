@@ -69,13 +69,20 @@ exports.login = async (req, res) => {
 
     user.password = undefined;
 
-    res.status(200).json({
-      status: 'success',
-      token,
-      data: {
-        user
-      }
-    });
+    res.
+      cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      })
+      .status(200).json({
+        status: 'success',
+        token,
+        data: {
+          user
+        }
+      });
   } catch (error) {
     res.status(400).json({
       status: 'error',

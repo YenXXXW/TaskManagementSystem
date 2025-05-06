@@ -3,7 +3,6 @@ const User = require('../models/user');
 const Notification = require('../models/notificaton')
 const { getIO } = require('../../config/socket')
 
-// Get all tasks for the authenticated user
 exports.getTasks = async (req, res) => {
   try {
     const tasks = await Task.find({
@@ -16,7 +15,14 @@ exports.getTasks = async (req, res) => {
       .populate('assignedTo', 'name email')
       .sort({ createdAt: -1 });
 
-    res.json(tasks);
+    const tasksWithOverdue = tasks.map(task => {
+      const isOverdue = new Date(task.dueDate) < new Date() && task.status !== 'completed';
+      return {
+        ...task.toObject(),
+        isOverdue
+      };
+    });
+    res.json(tasksWithOverdue);
   } catch (error) {
     console.error('Error fetching tasks:', error);
     res.status(500).json({ message: 'Error fetching tasks' });
@@ -60,14 +66,17 @@ exports.createTask = async (req, res) => {
       });
     }
 
+
     let task = new Task({
       title,
       description,
-      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      dueDate: new Date(dueDate).toISOString() || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       priority: priority || 'medium',
       status: status || 'pending',
       createdBy: req.user._id,
     });
+
+    console.log('created task', task)
 
     let assignedUser = null;
     if (assignedTo && assignedTo.trim() !== '') {
@@ -83,7 +92,8 @@ exports.createTask = async (req, res) => {
 
     const populatedTask = await Task.findById(task._id)
       .populate('createdBy', 'name email')
-      .populate('assignedTo', 'name email');
+      .populate('assignedTo', '_id name email');
+
 
     if (assignedUser) {
       const notification = new Notification({
@@ -95,17 +105,18 @@ exports.createTask = async (req, res) => {
       });
       await notification.save();
 
-      const populatedNotification = await Notification.findById(notification._id).populate('createdBy');
+      const populatedNotification = await Notification.findById(notification._id)
+        .populate('createdBy')
+        .populate({
+          path: 'task',
+          populate: [
+            { path: 'createdBy' },
+            { path: 'assignedTo' },
+          ]
+        });
 
       const io = getIO();
-      io.to(assignedUser._id.toString()).emit('taskAssigned', {
-        message: populatedNotification.message,
-        type: "taskAssigned",
-        task: populatedTask,
-        notificationId: populatedNotification._id,
-        createdAt: populatedNotification.createdAt,
-        createdBy: populatedNotification.createdBy,
-      });
+      io.to(assignedUser._id.toString()).emit('taskAssigned', populatedNotification);
     }
 
     res.status(201).json(populatedTask);
@@ -163,7 +174,6 @@ exports.updateTask = async (req, res) => {
 
     const notifyUserId = req.user._id.toString() === assigneeId ? taskCreatorId : assigneeId
 
-    console.log("notifyUserId", notifyUserId)
 
     if (notifyUserId) {
       const notification = new Notification({
@@ -175,17 +185,18 @@ exports.updateTask = async (req, res) => {
       });
       await notification.save();
 
-      const populatedNotification = await Notification.findById(notification._id).populate('createdBy');
+      const populatedNotification = await Notification.findById(notification._id)
+        .populate('createdBy')
+        .populate({
+          path: 'task',
+          populate: [
+            { path: 'createdBy' },
+            { path: 'assignedTo' },
+          ]
+        });
 
       const io = getIO()
-      io.to(notifyUserId).emit('taskUpdated', {
-        type: "taskUpdated",
-        message: populatedNotification.message,
-        task: updatedTask,
-        notificationId: populatedNotification._id,
-        createdAt: populatedNotification.createdAt,
-        createdBy: populatedNotification.createdBy,
-      });
+      io.to(notifyUserId).emit('taskUpdated', populatedNotification);
     }
 
     res.status(200).json(updatedTask);
@@ -302,5 +313,31 @@ exports.deleteTask = async (req, res) => {
   } catch (error) {
     console.error('Error deleting task:', error);
     res.status(500).json({ message: 'Error deleting task' });
+  }
+};
+
+
+exports.searchTasks = async (req, res) => {
+  try {
+    const { search } = req.query;
+    console.log("search string", search)
+
+    const query = {};
+
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const tasks = await Task.find(query)
+      .populate('createdBy')
+      .populate('assignedTo')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(tasks);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching tasks', error });
   }
 };

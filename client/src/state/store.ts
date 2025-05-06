@@ -1,11 +1,13 @@
 import { configureStore } from '@reduxjs/toolkit';
 import socketReducer from './socketSlice';
 import userSlice from './userSlice'
+import taskSlice from './taskSlice'
 
 export const store = configureStore({
   reducer: {
     socket: socketReducer,
-    user: userSlice
+    user: userSlice,
+    task: taskSlice
   },
 });
 

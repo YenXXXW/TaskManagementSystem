@@ -13,6 +13,7 @@ export interface Task {
   status: 'pending' | 'in-progress' | 'completed';
   priority: 'low' | 'medium' | 'high';
   dueDate: string;
+  isOverdue: boolean;
   createdBy: {
     _id: string;
     name: string;
@@ -69,10 +70,7 @@ export interface Notification {
   _id: string;
   type: 'taskUpdated' | 'taskAssigned' | 'taskCommented';
   message: string;
-  task?: {
-    _id: string;
-    title: string;
-  };
+  task?: Task;
   isRead: boolean;
   createdAt: string;
   createdBy: User
@@ -83,20 +81,18 @@ export interface NotiUpdateData {
 }
 
 export const api = {
-  async request<T>(endpoint: string, config: ApiConfig = {}): Promise<T> {
-    const token = localStorage.getItem('token');
-    const defaultHeaders = {
+  async request<T>(endpoint: string, config: ApiConfig & { token?: string } = {}): Promise<T> {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     };
-
+    if (config.token) {
+      headers['Cookie'] = `token=${config.token}`;
+    }
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: config.method || 'GET',
-      headers: {
-        ...defaultHeaders,
-        ...config.headers,
-      },
+      headers,
       body: config.body ? JSON.stringify(config.body) : undefined,
+      credentials: 'include'
     });
 
     if (!response.ok) {
@@ -108,13 +104,15 @@ export const api = {
   },
 
   tasks: {
-    getAll: () => api.request<Task[]>('/tasks'),
+    test: () => api.request('/'),
+    getAll: (token: string) => api.request<Task[]>('/tasks', { token }),
     getById: (id: string) => api.request<Task>(`/tasks/${id}`),
     create: (data: CreateTaskData) => api.request<Task>('/tasks', { method: 'POST', body: data }),
     update: (id: string, data: UpdateTaskData) => api.request<Task>(`/tasks/${id}`, { method: 'PUT', body: data }),
     delete: (data: DeleteTasksData) => api.request<{ message: string }>(`/tasks/delete`, { method: 'POST', body: data }),
     getByStatus: (status: string) => api.request<Task[]>(`/tasks/status/${status}`),
     getByPriority: (priority: string) => api.request<Task[]>(`/tasks/priority/${priority}`),
+    search: (searchTerm: string) => api.request<Task[]>(`/tasks/search?search=${encodeURIComponent(searchTerm)}`),
   },
 
   auth: {

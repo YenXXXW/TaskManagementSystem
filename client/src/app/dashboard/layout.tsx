@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { connectSocket } from '@/state/socketSlice';
 import { api } from '@/utils/api';
 import { BellIcon } from '@heroicons/react/24/outline';
+import { BellIcon as BellIconfilled } from '@heroicons/react/24/solid';
 import { addNotification } from '@/state/socketSlice';
 import { useRef } from 'react';
 import { Notification } from '@/utils/api';
@@ -24,10 +25,13 @@ export default function DashboardLayout({
   const router = useRouter();
   const dispatch = useAppDispatch();
   const [unreadNotis, setUnradNotis] = useState<string[]>([])
+  const [searchValue, setSeachValue] = useState('')
+  const [searchRes, setSearchRes] = useState([])
 
   const liveNoti = useAppSelector(state => state.socket.notifications)
 
   const notiRef = useRef<HTMLDivElement | null>(null)
+  const notiButtonRef = useRef<HTMLButtonElement | null>(null)
 
   useEffect(() => {
     setNotifications([...liveNoti])
@@ -40,7 +44,6 @@ export default function DashboardLayout({
     const notis = await api.notis.getAll(userId)
     dispatch(addNotification(notis))
     setNotifications(notis)
-    console.log(notis)
 
     const unreadIds = notfications.flatMap(noti => !noti.isRead ? [noti._id] : []);
     setUnradNotis(unreadIds)
@@ -50,6 +53,7 @@ export default function DashboardLayout({
   const handleNotiRead = async () => {
 
     try {
+      console.log("unread notis", unreadNotis)
       if (unreadNotis.length) {
         await api.notis.markRead({ ids: unreadNotis })
         const updateNotis = notfications.map(noti => ({
@@ -62,6 +66,18 @@ export default function DashboardLayout({
     } catch (error) {
       console.log("error updatig notifications", error)
     }
+  }
+
+  const handleSearch = async (search: string) => {
+    try {
+      setSeachValue(search)
+      const res = await api.tasks.search(search.trim())
+      console.log(res)
+    } catch (err) {
+      console.log("error performing search", err)
+    }
+
+
   }
 
 
@@ -169,16 +185,30 @@ export default function DashboardLayout({
 
         {/* Page Content */}
         <main className="p-6">
-          <div className="flex justify-end">
-            <div className="relative hover:bg-blue-200 cursor-pointer rounded-full w-10 h-10 flex items-center justify-center"
-              onClick={async () => {
-                setShowNotiView(!showNotiView)
+          <div className="flex gap-6 relative justify-end">
+            <input
+              className='border-2 px-1 border-gray-600 rounded-md focus:outline-none'
+              onChange={(e) => handleSearch(e.target.value)}
+            />
+            <div className="relative hover:bg-blue-200 cursor-pointer rounded-full w-10 h-10 flex items-center justify-center">
+              <button
+                ref={notiButtonRef}
+                onClick={async () => {
+                  setShowNotiView(!showNotiView)
 
-                await handleNotiRead()
-              }
-              }>
-              <BellIcon className="h-6 w-6 text-blue-500" />
+                  await handleNotiRead()
+                }
+                }>
+                {
+                  showNotiView ?
 
+                    <BellIconfilled className='h-6 w-6  text-blue-500' />
+                    :
+
+                    <BellIcon className="h-6 w-6  text-blue-500" />
+                }
+
+              </button>
               {unreadNotis.length > 0 && (
                 <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
                   {unreadNotis.length}
@@ -211,6 +241,14 @@ export default function DashboardLayout({
                 </div>
               }
             </div>
+            {
+              searchValue !== '' && (
+                <div className='absolute top-full right-0'>
+                  seach
+                </div>
+
+              )
+            }
           </div>
           {children}
         </main>

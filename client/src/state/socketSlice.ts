@@ -2,9 +2,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { getSocket } from '../utils/socket';
 import { AppDispatch } from './store';
 import { Notification } from '@/utils/api';
-
-
-
+import { addTask, updateTask } from './taskSlice';
 
 interface SocketState {
   connected: boolean;
@@ -50,10 +48,17 @@ export const connectSocket = (userId: string) => (dispatch: AppDispatch) => {
 
     socket.on('taskAssigned', (message: Notification) => {
       console.log("taskAssigend", message)
+      if (message.task) {
+        console.log("there is task ", message.task)
+        dispatch(addTask([message.task]))
+      }
       dispatch(addNotification([message]));
     });
 
     socket.on('taskUpdated', (message: Notification) => {
+      if (message.task) {
+        dispatch(updateTask(message.task))
+      }
       dispatch(addNotification([message]));
     });
   }

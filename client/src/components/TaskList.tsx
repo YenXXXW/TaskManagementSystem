@@ -4,11 +4,17 @@ import { useState, useEffect, useRef } from 'react';
 import { CheckIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { api, Task, User, UpdateTaskData, CreateTaskData } from '@/utils/api';
 import { useRouter } from 'next/navigation';
-import { useAppSelector } from '@/state/hooks';
+import { useAppDispatch, useAppSelector } from '@/state/hooks';
 import TaskCreateCard from './TaskCreateCard';
+import { addTask, refechTask } from '@/state/taskSlice';
 
-export default function TaskList() {
-  const [tasks, setTasks] = useState<Task[]>([]);
+interface TaskListProps {
+  tasks: Task[]
+}
+
+export default function TaskList({
+  tasks
+}: TaskListProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -16,7 +22,8 @@ export default function TaskList() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [assignedTasks, setAssignedTasks] = useState<Task[]>([]);
   const [createdTasks, setCreatedTasks] = useState<Task[]>([]);
-  const [activeTab, setActiveTab] = useState<'assigned' | 'created'>('assigned');
+  const [overdueTasks, setOverDueTasks] = useState<Task[]>([])
+  const [activeTab, setActiveTab] = useState<'assigned' | 'created' | 'overdue'>('assigned');
   const [selectedTasks, setSelectedTasks] = useState<string[]>([])
   const [AllTasksSelected, setAllTasksSelected] = useState(false)
   const router = useRouter();
@@ -25,27 +32,42 @@ export default function TaskList() {
   const [newTask, setNewTask] = useState<CreateTaskData>({
     title: '',
     description: '',
-    dueDate: '',
+    dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toString(),
     status: 'pending' as 'pending' | 'in-progress' | 'completed',
     priority: 'medium' as 'low' | 'medium' | 'high',
     assignedTo: '',
   });
 
+  let token: string | null
+  if (typeof window !== 'undefined') {
+    token = localStorage.getItem('token');
+  }
+
+  const dispatch = useAppDispatch()
+  useEffect(() => {
+
+    dispatch(addTask(tasks))
+  }, [])
+
+  const tasksFromSlice = useAppSelector(state => state.task.tasks)
 
   useEffect(() => {
-    fetchTasks();
     fetchUsers();
   }, []);
 
 
   useEffect(() => {
-    if (tasks.length && user) {
-      const assigned = tasks.filter(task => task.assignedTo?._id === user._id);
-      const created = tasks.filter(task => task.createdBy._id === user._id);
+    if (tasksFromSlice.length && user) {
+      console.log("from task Slice", tasksFromSlice)
+      const assigned = tasksFromSlice.filter(task => (task.assignedTo?._id === user._id));
+      const created = tasksFromSlice.filter(task => (task.createdBy._id === user._id));
+      const overdueTasks = tasksFromSlice.filter(task => (task.isOverdue));
+      setOverDueTasks(overdueTasks)
       setAssignedTasks(assigned)
       setCreatedTasks(created)
+      console.log(overdueTasks.length)
     }
-  }, [tasks])
+  }, [tasksFromSlice])
 
   const getTasksCount = (statusType: string) => {
     if (activeTab === "created") {
@@ -54,6 +76,8 @@ export default function TaskList() {
     } else if (activeTab === "assigned") {
 
       return assignedTasks.filter(t => t.status === statusType).length
+    } else if (activeTab === 'overdue') {
+      return overdueTasks.filter(t => t.status === statusType).length
     }
   }
 
@@ -68,9 +92,12 @@ export default function TaskList() {
 
   const fetchTasks = async () => {
     try {
+      if (!token) {
+        return
+      }
       setLoading(true);
-      const data = await api.tasks.getAll();
-      setTasks(data);
+      const data = await api.tasks.getAll(token);
+      dispatch(refechTask(data))
       setError(null);
     } catch (error) {
       setError('Failed to fetch tasks');
@@ -126,7 +153,7 @@ export default function TaskList() {
       } as UpdateTaskData);
       console.log("updatee res", res)
       setShowEditModal(false);
-      //await fetchTasks();
+      await fetchTasks();
     } catch (error) {
       setError('Failed to update task');
       console.error('Failed to update task:', error);
@@ -188,6 +215,18 @@ export default function TaskList() {
                 {createdTasks.length}
               </span>
             </button>
+            <button
+              onClick={() => setActiveTab('overdue')}
+              className={`${activeTab === 'overdue'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              OverDue Tasks
+              <span className="ml-2 bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                {overdueTasks.length}
+              </span>
+            </button>
 
             <button
               onClick={() => setShowCreateModal(true)}
@@ -199,12 +238,15 @@ export default function TaskList() {
               Add Task
             </button>
 
-            <button
-              onClick={handleDeleteTasks}
-              className="h-10 inline-flex items-center px-2 border-gray-600  text-sm font-medium rounded-md text-gray-600 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              Delete Task
-            </button>
+            {selectedTasks.length > 0 &&
+
+              <button
+                onClick={handleDeleteTasks}
+                className="h-10 inline-flex items-center px-2 border-gray-600  text-sm font-medium rounded-md text-gray-600 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Delete Task
+              </button>
+            }
           </nav>
         </div>
 
@@ -316,7 +358,7 @@ export default function TaskList() {
               hideTaskCreateModal={() => setShowCreateModal(false)}
             />
           }
-          {(activeTab === 'assigned' ? assignedTasks : createdTasks).map((task) => (
+          {(activeTab === 'assigned' ? assignedTasks : activeTab === 'created' ? createdTasks : overdueTasks).map((task) => (
             <TaskCard
               selectedTasks={selectedTasks}
               setSelectedTasks={setSelectedTasks}
@@ -379,6 +421,10 @@ function TaskCard({ task, users, handleUpdateTask, setSelectedTasks, selectedTas
 }
 ) {
 
+  const assigneeRef = useRef<HTMLDivElement | null>(null)
+  const priorityRef = useRef<HTMLDivElement | null>(null)
+  const statusRef = useRef<HTMLDivElement | null>(null)
+
   const [editingStatus, setEditingStatus] = useState(false);
   const [editingPriority, setEditingPrority] = useState(false);
   const [editingDueDate, setEditingDueDate] = useState(false)
@@ -389,6 +435,26 @@ function TaskCard({ task, users, handleUpdateTask, setSelectedTasks, selectedTas
 
 
   const dateInputRef = useRef<HTMLInputElement | null>(null)
+
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (assigneeRef.current && !assigneeRef.current.contains(event.target as Node)) {
+        setEditingAssignee(false);
+      }
+      if (priorityRef.current && !priorityRef.current.contains(event.target as Node)) {
+        setEditingPrority(false)
+      }
+
+      if (statusRef.current && !statusRef.current.contains(event.target as Node)) {
+        setEditingStatus(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
 
   useEffect(() => {
     if (editingDueDate && dateInputRef.current) {
@@ -483,6 +549,16 @@ function TaskCard({ task, users, handleUpdateTask, setSelectedTasks, selectedTas
     }
   }
 
+  const UpdateDesc = async () => {
+    try {
+      await handleUpdateTask(editedTask)
+    } catch (err) {
+      console.log("error udating taks", err)
+    }
+    setEditingDesc(false)
+  }
+
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'high':
@@ -514,38 +590,61 @@ function TaskCard({ task, users, handleUpdateTask, setSelectedTasks, selectedTas
       />
       <div className="p-4 shadow rounded-lg hover:shadow-lg transition-shadow grid grid-cols-[200px_200px_120px_120px_120px_120px] items-center gap-4 duration-200">
         {/* Title + Actions */}
-        <div className='relative'>
+        <div className='relative '>
           <input
             value={editedTask.title}
             placeholder='Enter description'
             onChange={(e) => handleTitleChange(e.target.value)}
-            className="text-sm text-gray-500 focus:outline-none "
+            className="text-sm w-full text-gray-500 focus:outline-none focus:bg-white/80"
           />
           {
             editingTitle && (
               <div className='absolute right-0'>
-                <button
-                  onClick={UpdateTitle}
-                  className='mr-2'>
-                  <CheckIcon className='bg-white w-5 h-5' />
-                </button>
-                <button onClick={() => setEditingTitle(false)}>
-                  <XMarkIcon className='bg-white w-6 h-5' />
-                </button>
+                <div className='flex gap-2'>
+                  <button
+                    onClick={UpdateTitle}
+                  >
+                    <CheckIcon className='bg-white w-5 h-5' />
+                  </button>
+                  <button onClick={() => setEditingTitle(false)}>
+                    <XMarkIcon className='bg-white w-6 h-5' />
+                  </button>
+                </div>
+
               </div>)
           }
         </div>
 
         {/* Description */}
-        <input
-          value={editedTask.description}
-          placeholder='Enter description'
-          onChange={(e) => handleDescriptionChange(e.target.value)}
-          className="text-sm text-gray-500 truncate"
-        />
+        <div className='relative'>
+          <input
+            value={editedTask.description}
+            placeholder='Enter description'
+            onChange={(e) => handleDescriptionChange(e.target.value)}
+            className="text-sm w-full text-gray-500 focus:outline-none focus:bg-white/80"
+          />
+          {
+            editingDesc && (
+              <div className='absolute right-0'>
+                <div className='flex gap-2'>
+                  <button
+                    onClick={UpdateDesc}
+                  >
+                    <CheckIcon className='bg-white w-5 h-5' />
+                  </button>
+                  <button onClick={() => setEditingDesc(false)}>
+                    <XMarkIcon className='bg-white w-6 h-5' />
+                  </button>
+                </div>
+
+              </div>)
+          }
+        </div>
 
         {/* Tags */}
-        <div className="relative flex text-sm font-semibold  space-x-2">
+        <div
+          ref={statusRef}
+          className="relative flex text-sm font-semibold  space-x-2">
           {editingStatus && (
             <div className="absolute z-50 bg-white top-full text-gray-800 rounded-md shadow-lg mt-1 w-full">
               <div
@@ -584,7 +683,9 @@ function TaskCard({ task, users, handleUpdateTask, setSelectedTasks, selectedTas
         <div className="relative cursor-pointer flex text-sm font-semibold  space-x-2">
 
           {editingPriority && (
-            <div className="absolute z-50 bg-white top-full text-gray-800 rounded-md shadow-lg mt-1 w-full">
+            <div
+              ref={priorityRef}
+              className="absolute z-50 bg-white top-full text-gray-800 rounded-md shadow-lg mt-1 w-full">
               <div
                 onClick={() => handlePriorityChange('low')}
                 className={`px-4 py-2 cursor-pointer `}
@@ -623,6 +724,7 @@ function TaskCard({ task, users, handleUpdateTask, setSelectedTasks, selectedTas
               ref={dateInputRef}
               type="date"
               value={editedTask.dueDate}
+              min={new Date().toISOString().split('T')[0]}
               onChange={(e) => handleDueDateChange(e.target.value)}
               onBlur={() => setEditingDueDate(false)}
               className="absolute top-full mt-1 px-2 py-1 rounded-md border border-gray-300 shadow-md text-sm z-50"
@@ -640,7 +742,7 @@ function TaskCard({ task, users, handleUpdateTask, setSelectedTasks, selectedTas
 
         {/* Assignee */}
         <div
-
+          ref={assigneeRef}
           onClick={() => setEditingAssignee(true)}
           className="flex cursor-pointer relative items-center text-sm text-gray-500">
           {
