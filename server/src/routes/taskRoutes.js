@@ -8,15 +8,17 @@ const {
   deleteTask,
   getTasksByStatus,
   getTasksByPriority,
-  searchTasks
+  searchTasks,
+  getNearDeadlineTasks
 
 } = require('../controllers/taskController');
 
 
-router.get('/status/:status', getTasksByStatus);
-router.get('/priority/:priority', getTasksByPriority);
+router.get('/status', getTasksByStatus);
+router.get('/priority', getTasksByPriority);
 router.post('/delete', deleteTask);
 router.get('/search', searchTasks);
+router.get('/nearDeathline', getNearDeadlineTasks)
 router.get('/:id', getTask);
 router.put('/:id', updateTask);
 router.get('/', getTasks);

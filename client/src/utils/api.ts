@@ -80,6 +80,23 @@ export interface NotiUpdateData {
   ids: string[]
 }
 
+export interface GetTaskByStatusData {
+  token: string,
+}
+
+interface GetTasksByStatusResponse {
+  pending: Task[],
+  inProgress: Task[],
+  completed: Task[]
+}
+
+
+interface GetTasksByPriorityResponse {
+  low: Task[],
+  medium: Task[],
+  high: Task[]
+}
+
 export const api = {
   async request<T>(endpoint: string, config: ApiConfig & { token?: string } = {}): Promise<T> {
     const headers: Record<string, string> = {
@@ -110,9 +127,10 @@ export const api = {
     create: (data: CreateTaskData) => api.request<Task>('/tasks', { method: 'POST', body: data }),
     update: (id: string, data: UpdateTaskData) => api.request<Task>(`/tasks/${id}`, { method: 'PUT', body: data }),
     delete: (data: DeleteTasksData) => api.request<{ message: string }>(`/tasks/delete`, { method: 'POST', body: data }),
-    getByStatus: (status: string) => api.request<Task[]>(`/tasks/status/${status}`),
-    getByPriority: (priority: string) => api.request<Task[]>(`/tasks/priority/${priority}`),
+    getByStatus: (data: GetTaskByStatusData) => api.request<GetTasksByStatusResponse>(`/tasks/status`, { token: data.token }),
+    getByPriority: (data: GetTaskByStatusData) => api.request<GetTasksByPriorityResponse>(`/tasks/priority`, { token: data.token }),
     search: (searchTerm: string) => api.request<Task[]>(`/tasks/search?search=${encodeURIComponent(searchTerm)}`),
+    getNearDeathlineTasks: () => api.request<Task[]>(`/tasks/nearDeathline`)
   },
 
   auth: {

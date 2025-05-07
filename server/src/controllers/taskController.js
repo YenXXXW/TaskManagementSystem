@@ -210,41 +210,63 @@ exports.updateTask = async (req, res) => {
 // Get tasks by status
 exports.getTasksByStatus = async (req, res) => {
   try {
-    const { status } = req.params;
+    const userId = req.user._id;
+
     const tasks = await Task.find({
-      status,
       $or: [
-        { createdBy: req.user._id },
-        { assignedTo: req.user._id }
+        { createdBy: userId },
+        { assignedTo: userId }
       ]
     })
       .populate('createdBy', 'name email')
       .populate('assignedTo', 'name email')
       .sort({ createdAt: -1 });
 
-    res.json(tasks);
+    const grouped = {
+      pending: [],
+      inProgress: [],
+      completed: [],
+    };
+
+    tasks.forEach(task => {
+      if (task.status === 'pending') {
+        grouped.pending.push(task);
+      } else if (task.status === 'in-progress') {
+        grouped.inProgress.push(task);
+      } else if (task.status === 'completed') {
+        grouped.completed.push(task);
+      }
+    });
+
+
+    res.json(grouped);
   } catch (error) {
-    console.error('Error fetching tasks by status:', error);
-    res.status(500).json({ message: 'Error fetching tasks by status' });
+    console.error('Error grouping tasks by status:', error);
+    res.status(500).json({ message: 'Error grouping tasks by status' });
   }
 };
 
 // Get tasks by priority
 exports.getTasksByPriority = async (req, res) => {
   try {
-    const { priority } = req.params;
-    const tasks = await Task.find({
-      priority,
-      $or: [
-        { createdBy: req.user._id },
-        { assignedTo: req.user._id }
-      ]
-    })
+    const tasks = await Task.find({ assignedTo: req.user._id })
       .populate('createdBy', 'name email')
       .populate('assignedTo', 'name email')
       .sort({ createdAt: -1 });
 
-    res.json(tasks);
+    const groupedTasks = {
+      low: [],
+      medium: [],
+      high: []
+    };
+
+    tasks.forEach(task => {
+      if (groupedTasks[task.priority]) {
+        groupedTasks[task.priority].push(task);
+      }
+    });
+
+    res.json(groupedTasks);
   } catch (error) {
     console.error('Error fetching tasks by priority:', error);
     res.status(500).json({ message: 'Error fetching tasks by priority' });
@@ -339,5 +361,34 @@ exports.searchTasks = async (req, res) => {
     res.status(200).json(tasks);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching tasks', error });
+  }
+};
+
+
+exports.getNearDeadlineTasks = async (_, res) => {
+  try {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0); // 00:00:00.000
+
+    const threeDaysLater = new Date();
+    threeDaysLater.setDate(startOfToday.getDate() + 3);
+    threeDaysLater.setHours(23, 59, 59, 999); // End of third day
+
+    const tasks = await Task.find({
+      dueDate: { $gte: startOfToday, $lte: threeDaysLater },
+      status: { $ne: "completed" },
+    }).sort({ dueDate: 1 })
+      .limit(5)
+      .populate("assignedTo", "name email")
+      .populate("createdBy", "name email");
+
+    if (!tasks || tasks.length === 0) {
+      return res.status(200).json({ message: "No near-deadline tasks found." });
+    }
+
+    return res.json(tasks);
+  } catch (error) {
+    console.error("Error fetching near-deadline tasks:", error);
+    res.status(500).json({ message: "Error fetching near-deadline tasks." });
   }
 };

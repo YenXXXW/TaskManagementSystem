@@ -29,6 +29,8 @@ export default async function DashboardPage() {
   );
 }
 
+
+
 async function fetchTasksFromServer(token: string) {
   const res = await api.tasks.getAll(token)
   console.log(res)

@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { CheckIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { api, Task, User, UpdateTaskData, CreateTaskData } from '@/utils/api';
 import { useRouter } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/state/hooks';
 import TaskCreateCard from './TaskCreateCard';
 import { addTask, refechTask } from '@/state/taskSlice';
+import { format } from 'date-fns'
+import Link from 'next/link';
 
 interface TaskListProps {
   tasks: Task[]
@@ -25,9 +27,11 @@ export default function TaskList({
   const [overdueTasks, setOverDueTasks] = useState<Task[]>([])
   const [activeTab, setActiveTab] = useState<'assigned' | 'created' | 'overdue'>('assigned');
   const [selectedTasks, setSelectedTasks] = useState<string[]>([])
+  const [nearDeadlineTasks, setNearDeadlineTasks] = useState<Task[]>([])
   const [AllTasksSelected, setAllTasksSelected] = useState(false)
   const router = useRouter();
   const user = useAppSelector(state => state.user.user)
+
 
   const [newTask, setNewTask] = useState<CreateTaskData>({
     title: '',
@@ -42,6 +46,16 @@ export default function TaskList({
   if (typeof window !== 'undefined') {
     token = localStorage.getItem('token');
   }
+
+  const fectchNearDealineTasks = async () => {
+    const res = await api.tasks.getNearDeathlineTasks()
+    setNearDeadlineTasks(res)
+  }
+
+  useEffect(() => {
+
+    fectchNearDealineTasks()
+  }, [])
 
   const dispatch = useAppDispatch()
   useEffect(() => {
@@ -65,7 +79,6 @@ export default function TaskList({
       setOverDueTasks(overdueTasks)
       setAssignedTasks(assigned)
       setCreatedTasks(created)
-      console.log(overdueTasks.length)
     }
   }, [tasksFromSlice])
 
@@ -179,6 +192,8 @@ export default function TaskList({
     <div className="min-h-screen bg-gray-100">
       <div className="max-w-7xl mx-auto px-4 ">
         {/* Header Section */}
+
+
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Task Dashboard</h1>
@@ -187,7 +202,36 @@ export default function TaskList({
             </p>
           </div>
         </div>
-
+        <div className='my-10 '>
+          {
+            nearDeadlineTasks.length > 0 && (
+              <div className="">
+                <h2 className="text-lg font-semibold text-gray-800 mb-3">Near Deadline Tasks</h2>
+                <ul className="space-x-10 flex overflow-auto">
+                  {nearDeadlineTasks.map((task) => (
+                    <li key={task._id} className="bg-red-100 rounded-md p-3 border border-red-500 transition duration-150 ease-in-out">
+                      <div className="flex justify-between gap-5 items-center">
+                        <div className='flex flex-col gap-3'>
+                          <h3 className="text-md font-medium text-gray-900">{task.title}</h3>
+                          <p className="text-sm text-gray-600">Due on: {format(new Date(task.dueDate), 'MMM dd, yyyy')}</p>
+                        </div>
+                        <span
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${task.priority === 'high'
+                            ? 'bg-red-100 text-red-800'
+                            : task.priority === 'medium'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-green-100 text-green-800'
+                            }`}
+                        >
+                          {task.priority}
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>)
+          }
+        </div>
         {/* Tabs Navigation */}
         <div className="border-b border-gray-200 mb-6">
           <nav className="-mb-px flex space-x-8 items-center">
@@ -358,15 +402,16 @@ export default function TaskList({
               hideTaskCreateModal={() => setShowCreateModal(false)}
             />
           }
-          {(activeTab === 'assigned' ? assignedTasks : activeTab === 'created' ? createdTasks : overdueTasks).map((task) => (
+          {(activeTab === 'assigned' ? assignedTasks : activeTab === 'created' ? createdTasks : overdueTasks).map((task, i) => (
             <TaskCard
               selectedTasks={selectedTasks}
               setSelectedTasks={setSelectedTasks}
               users={users}
-              key={task._id}
+              key={i}
               task={task}
               handleUpdateTask={handleUpdateTask}
             />
+
           ))}
         </div>
 
@@ -512,9 +557,19 @@ function TaskCard({ task, users, handleUpdateTask, setSelectedTasks, selectedTas
     }
   };
 
-  const handleDueDateChange = (newDate: string) => {
-    setEditedTask((prev) => ({ ...prev, dueDate: newDate }));
+  const handleDueDateChange = async (newDate: string) => {
+    const updatedTask = {
+      ...editedTask,
+      dueDate: newDate
+    }
+    setEditedTask(updatedTask);
     setEditingDueDate(false);
+
+    try {
+      await handleUpdateTask(updatedTask)
+    } catch (err) {
+      console.log("error upading assigne", err)
+    }
   };
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -725,7 +780,9 @@ function TaskCard({ task, users, handleUpdateTask, setSelectedTasks, selectedTas
               type="date"
               value={editedTask.dueDate}
               min={new Date().toISOString().split('T')[0]}
-              onChange={(e) => handleDueDateChange(e.target.value)}
+              onChange={(e) => {
+                handleDueDateChange(e.target.value)
+              }}
               onBlur={() => setEditingDueDate(false)}
               className="absolute top-full mt-1 px-2 py-1 rounded-md border border-gray-300 shadow-md text-sm z-50"
               autoFocus
