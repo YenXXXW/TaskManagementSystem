@@ -1,19 +1,34 @@
-import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
-import TaskList from '@/components/TaskList';
-import { api } from '@/utils/api';
+'use client'
 
-export default async function TasksPage() {
+import TaskList from '@/components/TaskList';
+import { useAppSelector } from '@/state/hooks';
+import { api, Task } from '@/utils/api';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+
+export default function TasksPage() {
+  const router = useRouter()
+  const token = useAppSelector(state => state.user.token)
+  const [tasks, setTasks] = useState<Task[]>([])
   {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('token')?.value;
 
 
     if (!token) {
-      redirect('/auth/login');
+      router.push('/auth/login')
     }
 
-    const tasks = await api.tasks.getAll(token);
+    const fetchTasks = async () => {
+
+      const tasks = await api.tasks.getAll(token);
+      setTasks(tasks)
+    }
+    useEffect(() => {
+      if (token !== '') {
+        fetchTasks
+      }
+
+    }, [token])
+
 
 
     return (

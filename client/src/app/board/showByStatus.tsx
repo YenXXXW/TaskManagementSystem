@@ -1,7 +1,9 @@
-import { api, Task } from "@/utils/api"
-import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
+'use client'
+
+import { api, GetTasksByStatusResponse, Task } from "@/utils/api"
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useAppSelector } from "@/state/hooks";
 
 const TaskColumn = ({ title, tasks }: { title: string; tasks: Task[] }) => (
   <div className="shadow-md rounded-lg p-1">
@@ -45,19 +47,36 @@ const TaskColumn = ({ title, tasks }: { title: string; tasks: Task[] }) => (
 )
 
 export default async function ShowByStatusPage() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('token')?.value;
-  if (!token) {
-    redirect('/auth/login');
+
+
+  const token = useAppSelector(state => state.user.token)
+  const [data, setData] = useState<GetTasksByStatusResponse | null>(null)
+
+  const fechTask = async () => {
+
+    const data = await api.tasks.getByStatus({ token });
+    setData(data)
+    setData(data)
   }
 
-  const { pending, inProgress, completed } = await api.tasks.getByStatus({ token });
+  useEffect(() => {
+
+    fechTask()
+
+  }, [])
 
   return (
+
     <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-3">
-      <TaskColumn title="Pending" tasks={pending} />
-      <TaskColumn title="In Progress" tasks={inProgress} />
-      <TaskColumn title="Completed" tasks={completed} />
+      {
+        data &&
+
+        <>
+          <TaskColumn title="Pending" tasks={data.pending} />
+          <TaskColumn title="In Progress" tasks={data.inProgress} />
+          <TaskColumn title="Completed" tasks={data.completed} />
+        </>
+      }
     </div>
   )
 }

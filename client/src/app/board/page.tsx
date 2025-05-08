@@ -1,19 +1,22 @@
-import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
 import BoardToggle from "./BoardToggle";
 import ShowByStatusPage from "./showByStatus";
 import ShowByPriorityPage from "./showByPriority";
+import { useRouter } from 'next/router';
+import { useAppSelector } from '@/state/hooks';
+import { useSearchParams } from "next/navigation";
 
-export default async function BoardPage({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
-  const { view } = await searchParams
-  const cookieStore = await cookies();
-  const token = cookieStore.get('token')?.value;
+export default function BoardPage() {
+  const searchParams = useSearchParams();
+  const view = searchParams.get('view');
+
+  const router = useRouter()
+
+  const token = useAppSelector(state => state.user.token)
+
+
   if (!token) {
-
-    redirect('/auth/login')
+    router.push('/auth/login')
   }
-
-
 
   return (
     <div>

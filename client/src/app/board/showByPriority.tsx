@@ -1,18 +1,27 @@
-import { api, Task } from "@/utils/api";
-import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
+'use client'
+
+import { useAppSelector } from "@/state/hooks";
+import { api, GetTasksByPriorityResponse, Task } from "@/utils/api";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 const priorities = ["low", "medium", "high"] as const;
 
 export default async function ShowByPriorityPage() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("token")?.value;
-  if (!token) {
-    redirect("/auth/login");
+  const token = useAppSelector(state => state.user.token)
+  const [data, setData] = useState<GetTasksByPriorityResponse | null>(null)
+
+  const fechTask = async () => {
+
+    const data = await api.tasks.getByPriority({ token });
+    setData(data)
   }
 
-  const data = await api.tasks.getByPriority({ token });
+  useEffect(() => {
+
+    fechTask()
+
+  }, [])
 
   const getColorClasses = (priority: string) => {
     switch (priority) {
@@ -33,12 +42,12 @@ export default async function ShowByPriorityPage() {
             {priority}
           </h2>
           <div className="space-y-3">
-            {data[priority].length === 0 ? (
+            {data && data[priority].length === 0 ? (
               <p className="text-gray-500 text-sm">
                 No {priority.charAt(0).toUpperCase() + priority.slice(1)} Priority Task
               </p>
             ) : (
-              data[priority].map((task: Task) => (
+              data && data[priority].map((task: Task) => (
 
                 <Link
                   href={`/tasks/${task._id}`}

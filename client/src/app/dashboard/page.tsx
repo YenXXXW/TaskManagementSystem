@@ -1,12 +1,17 @@
-import { cookies } from 'next/headers';
 import TaskStats from '@/components/TaskStats';
+import { useAppSelector } from '@/state/hooks';
+import { useRouter } from 'next/router';
 
-export default async function DashboardPage() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('token')?.value;
-  console.log(token)
+export default function DashboardPage() {
+
+  const router = useRouter()
+
+  const token = useAppSelector(state => state.user.token)
 
 
+  if (!token) {
+    router.push('/auth/login')
+  }
 
 
   return (

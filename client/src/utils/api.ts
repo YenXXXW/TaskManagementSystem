@@ -100,14 +100,14 @@ export interface GetTaskByStatusData {
   token: string,
 }
 
-interface GetTasksByStatusResponse {
+export interface GetTasksByStatusResponse {
   pending: Task[],
   inProgress: Task[],
   completed: Task[]
 }
 
 
-interface GetTasksByPriorityResponse {
+export interface GetTasksByPriorityResponse {
   low: Task[],
   medium: Task[],
   high: Task[]
