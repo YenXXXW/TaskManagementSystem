@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import TaskList from '@/components/TaskList';
 import { api } from '@/utils/api';
+import TaskStats from '@/components/TaskStats';
 
 export default async function DashboardPage() {
   const cookieStore = await cookies();
@@ -22,8 +23,8 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <div className="container mx-auto">
-        <TaskList tasks={tasks} />
+      <div className="">
+        <TaskStats />
       </div>
     </div>
   );

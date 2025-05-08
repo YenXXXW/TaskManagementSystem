@@ -47,9 +47,7 @@ export const connectSocket = (userId: string) => (dispatch: AppDispatch) => {
     dispatch(setConnected(true));
 
     socket.on('taskAssigned', (message: Notification) => {
-      console.log("taskAssigend", message)
       if (message.task) {
-        console.log("there is task ", message.task)
         dispatch(addTask([message.task]))
       }
       dispatch(addNotification([message]));
