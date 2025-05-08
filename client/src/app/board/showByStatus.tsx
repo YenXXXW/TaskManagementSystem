@@ -1,9 +1,9 @@
-import { api } from "@/utils/api"
+import { api, Task } from "@/utils/api"
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import Link from "next/link";
 
-const TaskColumn = ({ title, tasks }: { title: string; tasks: any[] }) => (
+const TaskColumn = ({ title, tasks }: { title: string; tasks: Task[] }) => (
   <div className="shadow-md rounded-lg p-1">
     <h2 className="text-md font-semibold rounded-md text-gray-700 capitalize p-2 mb-4">
       {title}

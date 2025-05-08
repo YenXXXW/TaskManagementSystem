@@ -1,5 +1,4 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { clearNotifications } from './socketSlice';
 import { AuthResponse } from '@/utils/api';
 
 interface User {

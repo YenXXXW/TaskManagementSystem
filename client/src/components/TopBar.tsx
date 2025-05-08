@@ -29,7 +29,6 @@ export default function TopBar({
   const router = useRouter();
   const dispatch = useAppDispatch();
   const [unreadNotis, setUnradNotis] = useState<string[]>([])
-  const [searchValue, setSeachValue] = useState('')
   const [showSearchModal, setShowSearchModal] = useState(false)
   const [searchRes, setSearchRes] = useState<Task[]>([])
 
@@ -112,7 +111,6 @@ export default function TopBar({
 
   const handleSearch = async (search: string) => {
     try {
-      setSeachValue(search)
       setShowSearchModal(true)
       const res = await api.tasks.search(search.trim())
       setSearchRes(res)
@@ -289,7 +287,7 @@ export default function TopBar({
                       {
 
                         notfications.length > 0 ?
-                          notfications.map((noti, i) => (
+                          notfications.map((noti) => (
                             <div key={noti._id}>
                               <NotiCard notifiation={noti} />
                             </div>

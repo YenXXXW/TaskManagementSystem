@@ -1,4 +1,4 @@
-import { api } from "@/utils/api";
+import { api, Task } from "@/utils/api";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import Link from "next/link";
@@ -38,7 +38,7 @@ export default async function ShowByPriorityPage() {
                 No {priority.charAt(0).toUpperCase() + priority.slice(1)} Priority Task
               </p>
             ) : (
-              data[priority].map((task: any) => (
+              data[priority].map((task: Task) => (
 
                 <Link
                   href={`/tasks/${task._id}`}

@@ -3,7 +3,6 @@ import "./globals.css";
 import ClientProvider from "@/components/clientProvider";
 import TopBar from "@/components/TopBar";
 import { cookies } from 'next/headers';
-import { api, Task } from "@/utils/api";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

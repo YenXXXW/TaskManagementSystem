@@ -54,6 +54,9 @@ export default function TaskList({
 
 
   useEffect(() => {
+    console.log(loading)
+    console.log(showEditModal)
+    console.log(error)
     if (tasksFromSlice && user) {
       const assigned = tasksFromSlice.filter(task => (task.assignedTo?._id === user._id));
       const created = tasksFromSlice.filter(task => (task.createdBy._id === user._id));

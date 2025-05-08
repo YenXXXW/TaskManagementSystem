@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
-import TaskList from '@/components/TaskList';
 import { api } from '@/utils/api';
 import TaskStats from '@/components/TaskStats';
 
@@ -14,12 +13,6 @@ export default async function DashboardPage() {
 
   const tasks = await fetchTasksFromServer(token);
 
-  const stats = {
-    total: tasks.length,
-    completed: tasks.filter(task => task.status === 'completed').length,
-    inProgress: tasks.filter(task => task.status === 'in-progress').length,
-    pending: tasks.filter(task => task.status === 'pending').length,
-  };
 
   return (
     <div className="min-h-screen bg-gray-100">

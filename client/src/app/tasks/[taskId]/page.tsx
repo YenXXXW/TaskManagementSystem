@@ -17,8 +17,12 @@ const TaskPage = () => {
         console.log(taskId)
         const res = await api.tasks.getById(taskId as string);
         setTask(res);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err) {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError('An unknown error occurred');
+        }
       } finally {
         setLoading(false);
       }
@@ -33,17 +37,6 @@ const TaskPage = () => {
   if (error) return <div>Error: {error}</div>;
   if (!task) return <div>No task found.</div>;
 
-  const statusColor = {
-    pending: 'bg-yellow-100 text-yellow-800',
-    'in-progress': 'bg-blue-100 text-blue-800',
-    completed: 'bg-green-100 text-green-800',
-  }[task.status];
-
-  const priorityColor = {
-    low: 'text-green-600',
-    medium: 'text-yellow-600',
-    high: 'text-red-600 font-semibold',
-  }[task.priority];
 
   return (
     <TaskDetail task={task} />

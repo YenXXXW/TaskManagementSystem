@@ -8,10 +8,9 @@ import { CheckIcon, XMarkIcon } from '@heroicons/react/24/solid';
 
 interface TaskDetailProps {
   task: Task;
-  onEdit: (updatedTask: Partial<Task>) => void;
 }
 
-const TaskDetail: React.FC<TaskDetailProps> = ({ task, onEdit }) => {
+const TaskDetail: React.FC<TaskDetailProps> = ({ task }) => {
   const [editableTask, setEditableTask] = useState<Task>(task);
   const [editingAssignee, setEditingAssignee] = useState(false)
   const [editingTitle, setEditingTitle] = useState(false)
@@ -26,7 +25,7 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ task, onEdit }) => {
       const res = await api.users.getAll()
       setUsers(res)
     } catch (err) {
-      console.log("Error fetching users")
+      console.log("Error fetching users", err)
     }
 
   }
