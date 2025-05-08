@@ -24,7 +24,7 @@ export default function TasksPage() {
     }
     useEffect(() => {
       if (token !== '') {
-        fetchTasks
+        fetchTasks()
       }
 
     }, [token])
@@ -34,6 +34,7 @@ export default function TasksPage() {
     return (
       <div className="min-h-screen bg-gray-100">
         <div className="container mx-auto">
+
           <TaskList tasks={tasks} />
         </div>
       </div>
