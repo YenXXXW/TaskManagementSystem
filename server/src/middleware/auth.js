@@ -4,7 +4,9 @@ const User = require('../models/user');
 exports.protect = async (req, res, next) => {
   try {
     let token;
+    console.log("token")
     if (req.cookies && req.cookies.token) {
+
       token = req.cookies.token;
     }
 
