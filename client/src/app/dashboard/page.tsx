@@ -1,3 +1,5 @@
+'use client'
+
 import TaskStats from '@/components/TaskStats';
 import { useAppSelector } from '@/state/hooks';
 import { useRouter } from 'next/router';
