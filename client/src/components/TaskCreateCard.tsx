@@ -116,7 +116,7 @@ export default function TaskCreateCard({ task, users, setNewTask, handleCreateTa
         type="checkbox" className=" z-10 opacity-0  transition-opacity"
       />
 
-      <div className="p-4 shadow rounded-lg hover:shadow-lg transition-shadow grid grid-cols-[200px_200px_120px_120px_120px_120px] items-center gap-4 duration-200">
+      <div className="p-4 shadow rounded-lg hover:shadow-lg transition-shadow grid grid-cols-[2fr_2fr_1fr_1fr_1fr_2fr] w-full litems-center gap-4 duration-200">
         {/* Title + Actions */}
         <div className="flex items-center space-x-2">
 
@@ -265,23 +265,24 @@ export default function TaskCreateCard({ task, users, setNewTask, handleCreateTa
             </svg>
             {users.find(user => user._id === task.assignedTo)?.name || 'Unassigned'}
           </div>
+
+          <div className="flex gap-3">
+            <button className="h-5 w-5 p-1 bg-green-500 rounded-full hover:bg-green-300"
+              onClick={handleCreateTask}
+            >
+
+              <CheckIcon className="text-white text-sm" />
+            </button>
+
+            <button className="h-5 w-5 p-1 bg-red-500 rounded-full hover:bg-red-300"
+              onClick={hideTaskCreateModal}
+            >
+              <XMarkIcon className="text-white text-sm" />
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="flex gap-3">
-        <button className="h-5 w-5 p-1 bg-green-500 rounded-full hover:bg-green-300"
-          onClick={handleCreateTask}
-        >
-
-          <CheckIcon className="text-white text-sm" />
-        </button>
-
-        <button className="h-5 w-5 p-1 bg-red-500 rounded-full hover:bg-red-300"
-          onClick={hideTaskCreateModal}
-        >
-          <XMarkIcon className="text-white text-sm" />
-        </button>
-      </div>
     </div>
   );
 } 

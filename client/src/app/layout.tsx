@@ -25,13 +25,14 @@ export default async function RootLayout({
   const cookieStore = await cookies();
   const token = cookieStore.get('token')?.value;
 
+
   return (
     <html lang="en">
       <body
         className={`bg-gray-100 ${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ClientProvider>
-          <TopBar token={token || ''}>
+          <TopBar token={token || ''} >
             {children}
           </TopBar>
         </ClientProvider>

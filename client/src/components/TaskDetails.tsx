@@ -1,26 +1,47 @@
 'use client'
 
-import React, { useState } from 'react';
-import { Task } from '@/utils/api'; // Assuming your interface is in types.ts
+import React, { useEffect, useRef, useState } from 'react';
+import { api, Task, UpdateTaskData, User } from '@/utils/api';
 import { format } from 'date-fns';
-import { ClockIcon, FlagIcon, UserIcon, IdentificationIcon, PencilSquareIcon } from '@heroicons/react/24/outline'; // Added PencilSquareIcon
+import { ClockIcon, FlagIcon, UserIcon } from '@heroicons/react/24/outline';
+import { useAppSelector } from '@/state/hooks';
+import { CheckIcon, XMarkIcon } from '@heroicons/react/24/solid';
 
 interface TaskDetailProps {
   task: Task;
-  onEdit: (updatedTask: Partial<Task>) => void; // Placeholder for your edit function
+  onEdit: (updatedTask: Partial<Task>) => void;
 }
 
 const TaskDetail: React.FC<TaskDetailProps> = ({ task, onEdit }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editableTask, setEditableTask] = useState<Partial<Task>>(task);
+  const [editableTask, setEditableTask] = useState<Task>(task);
+  const [editingAssignee, setEditingAssignee] = useState(false)
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [editingDesc, setEditingDesc] = useState(false)
+  const [users, setUsers] = useState<User[]>([])
 
-  const formatDate = (dateString: string) => {
+  const [originalTask, setOriginalTask] = useState<Task>(task)
+  const assigneeRef = useRef<HTMLDivElement | null>(null)
+
+  const getUsers = async () => {
     try {
-      return format(new Date(dateString), 'MMM dd, yyyy');
-    } catch (error) {
-      return 'N/A';
+      const res = await api.users.getAll()
+      setUsers(res)
+    } catch (err) {
+      console.log("Error fetching users")
     }
-  };
+
+  }
+
+  useEffect(() => {
+    getUsers()
+  }, [])
+
+  useEffect(() => {
+    setEditableTask(task)
+    setOriginalTask(task)
+  }, [task])
+
+  const user = useAppSelector(state => state.user.user)
 
   const priorityColorClass = (priority: Task['priority']) => {
     switch (priority) {
@@ -48,96 +69,222 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ task, onEdit }) => {
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setEditableTask({ ...editableTask, [name]: value });
+
+  const handleUpdateTask = async (editTask: Task) => {
+    if (!user) return
+    console.log("editTask", editTask)
+    const { _id, ...updatedTask } = editTask
+
+    try {
+      await api.tasks.update(_id, {
+        updatedBy: user._id,
+        ...updatedTask,
+        assignedTo: updatedTask?.assignedTo?._id || ''
+      } as UpdateTaskData);
+
+      setOriginalTask(editTask)
+    } catch (error) {
+      setEditableTask(originalTask)
+      console.error('Failed to update task:', error);
+    }
   };
 
-  const handleEditClick = () => {
-    setIsEditing(true);
+  const handleStatusChange = async (status: "pending" | "in-progress" | "completed") => {
+
+    const updatedTask = {
+      ...editableTask,
+      status
+    }
+    setEditableTask(updatedTask)
+    try {
+      await handleUpdateTask(updatedTask)
+    } catch (err) {
+      console.log("error udating taks", err)
+    }
+
   };
 
-  const handleSaveClick = () => {
-    onEdit(editableTask);
-    setIsEditing(false);
+
+  const handlePriorityChange = async (priority: "low" | "medium" | "high") => {
+    const updatedTask = {
+      ...editableTask,
+      priority
+    }
+    console.log("updated tAsk", updatedTask)
+    setEditableTask(updatedTask)
+
+    try {
+      await handleUpdateTask(updatedTask)
+    } catch (err) {
+      console.log("error udating taks", err)
+    }
   };
 
-  const handleCancelClick = () => {
-    setEditableTask(task);
-    setIsEditing(false);
+
+  const handleAssingeeChange = async (assignedTo: User) => {
+    const updatedTask = {
+      ...editableTask,
+      assignedTo
+    }
+    setEditableTask(updatedTask);
+    setEditingAssignee(false)
+
+    try {
+      await handleUpdateTask(updatedTask)
+    } catch (err) {
+      console.log("error upading assigne", err)
+    }
   };
+
+  const handleDueDateChange = async (newDate: string) => {
+    const updatedTask = {
+      ...editableTask,
+      dueDate: newDate
+    }
+    setEditableTask(updatedTask);
+
+    try {
+      await handleUpdateTask(updatedTask)
+    } catch (err) {
+      console.log("error upading assigne", err)
+    }
+  };
+
+  const handleDescriptionChange = (description: string) => {
+    setEditingDesc(true)
+    setEditableTask(prev => ({ ...prev, description }))
+  }
+
+  const handleTitleChange = async (title: string) => {
+    setEditingTitle(true)
+    const updatedTask = {
+      ...editableTask,
+      title
+    }
+    setEditableTask(updatedTask)
+  }
+
+  const UpdateTitle = async () => {
+    try {
+      await handleUpdateTask(editableTask)
+      setEditingTitle(false)
+    } catch (err) {
+      console.log("error udating taks", err)
+    }
+  }
+
+  const UpdateDesc = async () => {
+    try {
+      await handleUpdateTask(editableTask)
+      setEditingDesc(false)
+    } catch (err) {
+      console.log("error udating taks", err)
+    }
+    setEditingDesc(false)
+  }
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (assigneeRef.current && !assigneeRef.current.contains(event.target as Node)) {
+        setEditingAssignee(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
-    <div className="bg-white rounded-lg shadow-xl overflow-hidden">
-      <div className="px-6 py-4 relative">
-        <h2 className="text-2xl font-bold text-gray-900 mb-3">
-          {isEditing ? (
-            <input
-              type="text"
-              name="title"
-              value={editableTask.title || ''}
-              onChange={handleInputChange}
-              className="w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-            />
-          ) : (
-            task.title
-          )}
+    <div className="bg-white rounded-lg shadow-xl p-10">
+      <div>
+
+        <h2 className="text-2xl relative max-w-[400px] font-bold text-gray-900 mb-3">
+          <input
+            type="text"
+            name="title"
+            value={editableTask.title || ''}
+            onChange={(e) => handleTitleChange(e.target.value)}
+            className="w-full p-2 my-5 text-md lg:text-xl border-gray-300 rounded-md focus:outline-none"
+          />
+
+          {
+            editingTitle && (
+              <div className='absolute right-0 z-20'>
+                <div className='flex gap-2'>
+                  <button
+                    onClick={UpdateTitle}
+                  >
+                    <CheckIcon className='bg-white  shadow w-5 h-5' />
+                  </button>
+                  <button onClick={() => {
+                    setEditableTask(originalTask)
+                    setEditingTitle(false)
+                  }}>
+                    <XMarkIcon className='bg-white  shadow w-6 h-5' />
+                  </button>
+                </div>
+
+              </div>)
+          }
         </h2>
-        <button
-          onClick={handleEditClick}
-          className="absolute top-4 right-4 text-gray-500 hover:text-indigo-600 focus:outline-none"
-        >
-          <PencilSquareIcon className="h-5 w-5" />
-        </button>
-        {isEditing ? (
+        <div className='relative'>
           <textarea
+            placeholder="Enter description"
+            rows={5}
             name="description"
             value={editableTask.description || ''}
-            onChange={handleInputChange}
-            className="w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm mb-5"
+            onChange={(e) => handleDescriptionChange(e.target.value)}
+            className="w-full border p-2 border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none sm:text-sm mb-5"
           />
-        ) : (
-          <p className="text-gray-700 leading-relaxed mb-5">{task.description}</p>
-        )}
 
-        <div className="grid grid-cols-1 gap-y-4 md:grid-cols-2 md:gap-x-6 mb-4">
+          {
+            editingDesc && (
+              <div className='absolute right-0'>
+                <div className='flex gap-2'>
+                  <button
+                    onClick={UpdateDesc}
+                  >
+                    <CheckIcon className='bg-white shadow w-5 h-5' />
+                  </button>
+
+                  <button onClick={() => {
+                    setEditableTask(originalTask)
+                    setEditingTitle(false)
+                  }}>
+                    <XMarkIcon className='bg-white shadow w-6 h-5' />
+                  </button>
+                </div>
+
+              </div>)
+          }
+        </div>
+
+        <div className="grid grid-cols-1 gap-y-4  md:gap-x-6 mb-4">
           <div className="flex items-center space-x-3">
             <ClockIcon className="h-5 w-5 text-blue-500" />
             <span className="text-sm font-medium text-gray-600">Due Date:</span>
-            {isEditing ? (
-              <input
-                type="date"
-                name="dueDate"
-                value={editableTask.dueDate ? formatDate(editableTask.dueDate).split(',')[0] : ''} // Basic date input
-                onChange={handleInputChange}
-                className="text-sm font-semibold text-gray-800 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              />
-            ) : (
-              <span className={`text-sm font-semibold ${task.isOverdue ? 'text-red-600' : 'text-gray-800'}`}>
-                {formatDate(task.dueDate)} {task.isOverdue && <span className="italic text-xs">(Overdue)</span>}
-              </span>
-            )}
+            <input
+              type="date"
+              name="dueDate"
+              value={editableTask.dueDate ? editableTask.dueDate.slice(0, 10) : ''}
+              onChange={(e) => handleDueDateChange(e.target.value)}
+              className="text-sm font-semibold text-gray-800 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            />
           </div>
 
           <div className="flex items-center space-x-3">
             <FlagIcon className="h-5 w-5 text-orange-500" />
             <span className="text-sm font-medium text-gray-600">Priority:</span>
-            {isEditing ? (
-              <select
-                name="priority"
-                value={editableTask.priority || 'medium'}
-                onChange={handleInputChange}
-                className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-bold border border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${priorityColorClass(editableTask.priority || 'medium')}`}
-              >
-                <option value="low" className={priorityColorClass('low')}>Low</option>
-                <option value="medium" className={priorityColorClass('medium')}>Medium</option>
-                <option value="high" className={priorityColorClass('high')}>High</option>
-              </select>
-            ) : (
-              <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-bold ${priorityColorClass(task.priority)}`}>
-                {task.priority}
-              </span>
-            )}
+            <select
+              name="priority"
+              value={editableTask.priority || 'medium'}
+              onChange={(e) => handlePriorityChange(e.target.value as "low" | "medium" | "high")}
+              className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-bold border border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${priorityColorClass(task.priority || 'medium')}`}
+            >
+              <option value="low" className={priorityColorClass('low')}>Low</option>
+              <option value="medium" className={priorityColorClass('medium')}>Medium</option>
+              <option value="high" className={priorityColorClass('high')}>High</option>
+            </select>
           </div>
 
           <div className="flex items-center space-x-3">
@@ -147,63 +294,61 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ task, onEdit }) => {
               </svg>
             </span>
             <span className="text-sm font-medium text-gray-600">Status:</span>
-            {isEditing ? (
-              <select
-                name="status"
-                value={editableTask.status || 'pending'}
-                onChange={handleInputChange}
-                className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-bold border border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${statusColorClass(editableTask.status || 'pending')}`}
-              >
-                <option value="pending" className={statusColorClass('pending')}>Pending</option>
-                <option value="in-progress" className={statusColorClass('in-progress')}>In Progress</option>
-                <option value="completed" className={statusColorClass('completed')}>Completed</option>
-              </select>
-            ) : (
-              <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-bold ${statusColorClass(task.status)}`}>
-                {task.status.replace('-', ' ')}
-              </span>
-            )}
+            <select
+              name="status"
+              value={editableTask.status || 'pending'}
+              onChange={(e) => handleStatusChange(e.target.value as "pending" | "in-progress" | "completed")}
+              className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-bold border border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${statusColorClass(task.status || 'pending')}`}
+            >
+              <option value="pending" className={statusColorClass('pending')}>Pending</option>
+              <option value="in-progress" className={statusColorClass('in-progress')}>In Progress</option>
+              <option value="completed" className={statusColorClass('completed')}>Completed</option>
+            </select>
           </div>
 
-          {task.assignedTo && (
-            <div className="flex items-center space-x-3">
-              <UserIcon className="h-5 w-5 text-indigo-500" />
-              <span className="text-sm font-medium text-gray-600">Assigned To:</span>
-              <span className="text-sm text-gray-800">{task.assignedTo.name}</span>
-            </div>
-          )}
+
+          {/* Assignee */}
+          <div
+            ref={assigneeRef}
+            onClick={() => setEditingAssignee(true)}
+            className="flex cursor-pointer space-x-3 relative items-center  text-gray-500">
+            <UserIcon className="h-5 w-5 text-teal-500" />
+            <span className="text-sm  font-medium text-gray-600">Assigned To:
+
+            </span>
+            <span className="text-sm relative text-gray-800">{editableTask.assignedTo?.name || "Unassigned"}
+
+              {
+                editingAssignee && (
+                  <div className='absolute z-50 top-full right-0 w-[150px] text-gray-800 rounded-md shadow-lg mt-1 p-3 bg-gray-100'>
+
+                    {
+                      users.map(user => (
+                        <span
+                          key={user._id}
+                          onClick={() => handleAssingeeChange(user)}
+                          className='p-2 block hover:bg-white rounded-sm'
+                        >
+                          {user.name}
+                        </span>
+                      ))
+                    }
+                  </div>
+
+                )
+              }
+            </span>
+
+          </div>
+
 
           <div className="flex items-center space-x-3">
-            <UserIcon className="h-5 w-5 text-teal-500" />
+            <UserIcon className="h-5 w-5 text-red-500" />
             <span className="text-sm font-medium text-gray-600">Created By:</span>
             <span className="text-sm text-gray-800">{task.createdBy.name}</span>
           </div>
 
-          <div>
-            <div className="flex items-center space-x-3">
-              <IdentificationIcon className="h-5 w-5 text-gray-500" />
-              <span className="text-sm font-medium text-gray-600">Task ID:</span>
-            </div>
-            <span className="text-sm text-gray-800 ml-8">{task._id}</span>
-          </div>
         </div>
-
-        {(isEditing) && (
-          <div className="mt-6 flex justify-end space-x-2">
-            <button
-              onClick={handleCancelClick}
-              className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSaveClick}
-              className="bg-indigo-500 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-            >
-              Save
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

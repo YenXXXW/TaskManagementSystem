@@ -3,6 +3,9 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useAppDispatch } from '@/state/hooks';
+import { login } from '@/state/userSlice';
+import { api } from '@/utils/api';
 //import { ApiError } from '@/types/error';
 
 export default function LoginPage() {
@@ -14,31 +17,22 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const dispatch = useAppDispatch()
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
-      const response = await fetch('http://localhost:4000/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-        credentials: 'include'
-      });
+      const response = await api.auth.login(formData)
 
-      const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
-      }
+      console.log(response)
 
+      dispatch(login(response))
 
       // Store token in localStorage
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.data.user));
 
       // Redirect to dashboard
       router.push('/dashboard');
@@ -59,7 +53,8 @@ export default function LoginPage() {
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
             Or{' '}
-            <Link href="/auth/register" className="font-medium text-primary-600 hover:text-primary-500">
+            <br />
+            <Link href="/auth/register" className="text-blue-500 font-medium text-primary-600 hover:text-primary-500">
               create a new account
             </Link>
           </p>
@@ -105,7 +100,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div>
+          <div className='bg-blue-600'>
             <button
               type="submit"
               disabled={loading}

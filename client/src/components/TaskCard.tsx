@@ -1,6 +1,8 @@
 import { Task, User } from "@/utils/api";
 import { useEffect, useRef, useState } from "react";
-import { CheckIcon, XMarkIcon } from '@heroicons/react/24/solid';
+import { CheckIcon, XMarkIcon, ArrowTurnUpRightIcon } from '@heroicons/react/24/solid';
+import Link from "next/link";
+import { useAppSelector } from "@/state/hooks";
 
 export function TaskCard({ task, users, handleUpdateTask, setSelectedTasks, selectedTasks }: {
   task: Task;
@@ -14,6 +16,7 @@ export function TaskCard({ task, users, handleUpdateTask, setSelectedTasks, sele
   const assigneeRef = useRef<HTMLDivElement | null>(null)
   const priorityRef = useRef<HTMLDivElement | null>(null)
   const statusRef = useRef<HTMLDivElement | null>(null)
+  const [originalTask, setOriginalTask] = useState(task)
 
   const [editingStatus, setEditingStatus] = useState(false);
   const [editingPriority, setEditingPrority] = useState(false);
@@ -24,11 +27,13 @@ export function TaskCard({ task, users, handleUpdateTask, setSelectedTasks, sele
   const [editingDesc, setEditingDesc] = useState(false)
 
 
+  const currentUser = useAppSelector(state => state.user.user)
+
   useEffect(() => {
     setEditedTask(task)
+    setOriginalTask(task)
   }, [task])
   const dateInputRef = useRef<HTMLInputElement | null>(null)
-
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -56,8 +61,22 @@ export function TaskCard({ task, users, handleUpdateTask, setSelectedTasks, sele
     }
   }, [editingDueDate]);
 
+  const updateTask = async (updatedTask: Task) => {
+    try {
+      await handleUpdateTask(updatedTask)
+      setOriginalTask(updatedTask)
+
+    } catch (error) {
+      console.log("error updating taks", error)
+      setEditedTask(originalTask)
+
+    }
+
+  }
+
   const handleStatusChange = async (status: "pending" | "in-progress" | "completed") => {
 
+    console.log("hello")
     const updatedTask = {
       ...editedTask,
       status
@@ -65,7 +84,8 @@ export function TaskCard({ task, users, handleUpdateTask, setSelectedTasks, sele
     setEditedTask(updatedTask)
     setEditingStatus(false);
     try {
-      await handleUpdateTask(updatedTask)
+
+      await updateTask(updatedTask)
     } catch (err) {
       console.log("error udating taks", err)
     }
@@ -83,7 +103,7 @@ export function TaskCard({ task, users, handleUpdateTask, setSelectedTasks, sele
     setEditingPrority(false);
 
     try {
-      await handleUpdateTask(updatedTask)
+      await updateTask(updatedTask)
     } catch (err) {
       console.log("error udating taks", err)
     }
@@ -99,7 +119,7 @@ export function TaskCard({ task, users, handleUpdateTask, setSelectedTasks, sele
     setEditingAssignee(false)
 
     try {
-      await handleUpdateTask(updatedTask)
+      await updateTask(updatedTask)
     } catch (err) {
       console.log("error upading assigne", err)
     }
@@ -114,7 +134,7 @@ export function TaskCard({ task, users, handleUpdateTask, setSelectedTasks, sele
     setEditingDueDate(false);
 
     try {
-      await handleUpdateTask(updatedTask)
+      await updateTask(updatedTask)
     } catch (err) {
       console.log("error upading assigne", err)
     }
@@ -146,7 +166,8 @@ export function TaskCard({ task, users, handleUpdateTask, setSelectedTasks, sele
 
   const UpdateTitle = async () => {
     try {
-      await handleUpdateTask(editedTask)
+      await updateTask(editedTask)
+      setEditingTitle(false)
     } catch (err) {
       console.log("error udating taks", err)
     }
@@ -154,7 +175,7 @@ export function TaskCard({ task, users, handleUpdateTask, setSelectedTasks, sele
 
   const UpdateDesc = async () => {
     try {
-      await handleUpdateTask(editedTask)
+      await updateTask(editedTask)
     } catch (err) {
       console.log("error udating taks", err)
     }
@@ -174,31 +195,35 @@ export function TaskCard({ task, users, handleUpdateTask, setSelectedTasks, sele
   };
 
   const toggleTaskSelect = () => {
-    console.log("h")
-    if (selectedTasks.includes(task._id)) {
-      const updated = selectedTasks.filter(t => t !== task._id)
-      setSelectedTasks([...updated])
-    } else {
-      setSelectedTasks([...selectedTasks, task._id])
-    }
+    if (currentUser && currentUser._id === task.createdBy._id)
+      if (selectedTasks.includes(task._id)) {
+        const updated = selectedTasks.filter(t => t !== task._id)
+        setSelectedTasks([...updated])
+      } else {
+        setSelectedTasks([...selectedTasks, task._id])
+      }
   }
 
   return (
-    <div className=" group flex gap-3">
+    <div className="relative group flex gap-3 " >
+
+
       <input
         type="checkbox"
         checked={selectedTasks.includes(task._id)}
         onChange={toggleTaskSelect}
-        className={`${selectedTasks.includes(task._id) && "opacity-100"} z-10 opacity-0 group-hover:opacity-100 transition-opacity`}
+        className={` ${selectedTasks.includes(task._id) && "opacity-100"} z-10 opacity-0 group-hover:opacity-100 transition-opacity ${task.createdBy._id !== currentUser?._id ? 'cursor-not-allowed' : 'cursor-pointer'} `}
       />
 
-      <div className="p-4 grid grid-cols-[2fr_2fr_1fr_1fr_1fr_2fr] w-full  items-center gap-4 font-semibold">
-        {/* Title + Actions */}
+      <div className="p-4 shadow rounded-lg hover:shadow-lg transition-shadow grid grid-cols-[2fr_2fr_1fr_1fr_1fr_2fr] w-full litems-center gap-4 duration-200">
         <div className='relative '>
           <input
             value={editedTask.title}
-            placeholder='Enter description'
-            onChange={(e) => handleTitleChange(e.target.value)}
+            placeholder='Enter Title'
+            onChange={(e) => {
+              e.stopPropagation()
+              handleTitleChange(e.target.value)
+            }}
             className="text-sm w-full text-gray-500 focus:outline-none focus:bg-white/80"
           />
           {
@@ -210,7 +235,13 @@ export function TaskCard({ task, users, handleUpdateTask, setSelectedTasks, sele
                   >
                     <CheckIcon className='bg-white w-5 h-5' />
                   </button>
-                  <button onClick={() => setEditingTitle(false)}>
+                  <button onClick={() => {
+                    setEditedTask({
+                      ...task,
+                      title: originalTask.title
+                    })
+                    setEditingTitle(false)
+                  }}>
                     <XMarkIcon className='bg-white w-6 h-5' />
                   </button>
                 </div>
@@ -224,7 +255,12 @@ export function TaskCard({ task, users, handleUpdateTask, setSelectedTasks, sele
           <input
             value={editedTask.description}
             placeholder='Enter description'
-            onChange={(e) => handleDescriptionChange(e.target.value)}
+            onChange={(e) => {
+              e.preventDefault()
+              handleDescriptionChange(e.target.value)
+            }
+            }
+
             className="text-sm w-full text-gray-500 focus:outline-none focus:bg-white/80"
           />
           {
@@ -236,7 +272,13 @@ export function TaskCard({ task, users, handleUpdateTask, setSelectedTasks, sele
                   >
                     <CheckIcon className='bg-white w-5 h-5' />
                   </button>
-                  <button onClick={() => setEditingDesc(false)}>
+                  <button onClick={() => {
+                    setEditedTask({
+                      ...task,
+                      description: originalTask.description
+                    })
+                    setEditingDesc(false)
+                  }}>
                     <XMarkIcon className='bg-white w-6 h-5' />
                   </button>
                 </div>
@@ -327,7 +369,7 @@ export function TaskCard({ task, users, handleUpdateTask, setSelectedTasks, sele
             <input
               ref={dateInputRef}
               type="date"
-              value={editedTask.dueDate}
+              value={editedTask.dueDate ? editedTask.dueDate.slice(0, 10) : ''}
               min={new Date().toISOString().split('T')[0]}
               onChange={(e) => {
                 handleDueDateChange(e.target.value)
@@ -347,38 +389,44 @@ export function TaskCard({ task, users, handleUpdateTask, setSelectedTasks, sele
         </div>
 
         {/* Assignee */}
-        <div
-          ref={assigneeRef}
-          onClick={() => setEditingAssignee(true)}
-          className="flex cursor-pointer relative items-center text-sm text-gray-500">
-          {
-            editingAssignee && (
-              <div className='absolute z-50 bg-white top-full text-gray-800 rounded-md shadow-lg mt-1 w-full'>
+        <div className="flex justify-between">
+          <div
+            ref={assigneeRef}
+            onClick={() => setEditingAssignee(true)}
+            className="flex cursor-pointer relative items-center text-sm text-gray-500">
+            {
+              editingAssignee && (
+                <div className='absolute z-50 bg-white top-full text-gray-800 rounded-md shadow-lg mt-1 w-full'>
 
-                {
-                  users.map(user => (
-                    <span
-                      key={user._id}
-                      onClick={() => handleAssingeeChange(user)}
-                      className='my-2 block hover:bg-green-50'
-                    >
-                      {user.name}
-                    </span>
-                  ))
-                }
-              </div>
+                  {
+                    users.map(user => (
+                      <span
+                        key={user._id}
+                        onClick={() => handleAssingeeChange(user)}
+                        className='my-2 block hover:bg-green-50'
+                      >
+                        {user.name}
+                      </span>
+                    ))
+                  }
+                </div>
 
-            )
-          }
-          <svg
-            className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-          </svg>
-          {editedTask.assignedTo?.name || 'Unassigned'}
+              )
+            }
+            <svg
+              className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            {editedTask.assignedTo?.name || 'Unassigned'}
+          </div>
+
+          <Link href={`tasks/${editedTask._id}`}>
+            <ArrowTurnUpRightIcon className="w-6 h-6 text-green-500" />
+          </Link>
         </div>
 
 
       </div>
-    </div>
+    </div >
   );
 } 

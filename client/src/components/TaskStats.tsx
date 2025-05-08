@@ -13,7 +13,7 @@ export default function TaskStats() {
   const [assignedTasks, setAssignedTasks] = useState<Task[]>([]);
   const [createdTasks, setCreatedTasks] = useState<Task[]>([]);
   const [overdueTasks, setOverDueTasks] = useState<Task[]>([])
-  const [activeTab, setActiveTab] = useState<'assigned' | 'created' | 'overdue'>('assigned');
+  const [activeTab, setActiveTab] = useState<'assigned' | 'created' | 'overdue'>('created');
   const [nearDeadlineTasks, setNearDeadlineTasks] = useState<Task[]>([])
 
   const user = useAppSelector(state => state.user.user)
@@ -45,7 +45,6 @@ export default function TaskStats() {
 
   useEffect(() => {
     if (tasksFromSlice.length && user) {
-      console.log("from task Slice", tasksFromSlice)
       const assigned = tasksFromSlice.filter(task => (task.assignedTo?._id === user._id));
       const created = tasksFromSlice.filter(task => (task.createdBy._id === user._id));
       const overdueTasks = tasksFromSlice.filter(task => (task.isOverdue));
@@ -85,6 +84,50 @@ export default function TaskStats() {
               </ul>
             </div>)
         }
+
+      </div>
+
+      <div className="border-b border-gray-200 mb-6">
+        <nav className="-mb-px flex space-x-8 items-center">
+          <button
+            onClick={() => setActiveTab('created')}
+            className={`${activeTab === 'created'
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+          >
+            Created Tasks
+            <span className="ml-2 bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+              {createdTasks.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('assigned')}
+            className={`${activeTab === 'assigned'
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+          >
+            Tasks Assigned To Me
+            <span className="ml-2 bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+              {assignedTasks.length}
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveTab('overdue')}
+            className={`${activeTab === 'overdue'
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+          >
+            OverDue Tasks
+            <span className="ml-2 bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+              {overdueTasks.length}
+            </span>
+          </button>
+
+        </nav>
       </div>
       < div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8" >
         <div className="bg-white overflow-hidden shadow rounded-lg">
@@ -98,7 +141,7 @@ export default function TaskStats() {
               <div className="ml-5 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Total Tasks</dt>
-                  <dd className="text-lg font-semibold text-gray-900">{activeTab === "created" ? createdTasks.length : assignedTasks.length}</dd>
+                  <dd className="text-lg font-semibold text-gray-900">{activeTab === "created" ? createdTasks.length : activeTab === 'assigned' ? assignedTasks.length : overdueTasks.length}</dd>
                 </dl>
               </div>
             </div>

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useAppDispatch, useAppSelector } from "@/state/hooks";
 import { useRouter } from 'next/navigation';
 import { usePathname } from 'next/navigation';
-import { connectSocket } from '@/state/socketSlice';
+import { clearNotifications, connectSocket } from '@/state/socketSlice';
 import { api, Task } from '@/utils/api';
 import { BellIcon } from '@heroicons/react/24/outline';
 import { BellIcon as BellIconfilled } from '@heroicons/react/24/solid';
@@ -13,10 +13,10 @@ import { addNotification } from '@/state/socketSlice';
 import { useRef } from 'react';
 import { Notification } from '@/utils/api';
 import NotiCard from '@/components/NotiCard';
-import { addTask } from '@/state/taskSlice';
+import { addTask, clearTasks } from '@/state/taskSlice';
+import { logout } from '@/state/userSlice';
 
 export default function TopBar({
-  token,
   children,
 }: {
 
@@ -31,6 +31,7 @@ export default function TopBar({
   const dispatch = useAppDispatch();
   const [unreadNotis, setUnradNotis] = useState<string[]>([])
   const [searchValue, setSeachValue] = useState('')
+  const [showSearchModal, setShowSearchModal] = useState(false)
   const [searchRes, setSearchRes] = useState<Task[]>([])
 
   const liveNoti = useAppSelector(state => state.socket.notifications)
@@ -38,6 +39,9 @@ export default function TopBar({
   const notiRef = useRef<HTMLDivElement | null>(null)
   const notiButtonRef = useRef<HTMLButtonElement | null>(null)
 
+  const userFromSlice = useAppSelector(state => state.user.user)
+  const notiFromSlice = useAppSelector(state => state.socket.notifications)
+  const token = useAppSelector(state => state.user.token)
 
   const pathname = usePathname();
   const noLayout = pathname.startsWith('/auth/login') || pathname.startsWith('/auth/signup');
@@ -49,12 +53,25 @@ export default function TopBar({
   }
 
   useEffect(() => {
+
+    console.log("thsi trigger")
+    console.log("user form Slice", userFromSlice)
+    if (userFromSlice) {
+      setUserName(userFromSlice.name)
+
+      dispatch(connectSocket(userFromSlice._id))
+      getNotifications(userFromSlice._id)
+    } else {
+      setUserName('')
+    }
+  }, [userFromSlice])
+
+  useEffect(() => {
+    console.log("token is", token)
     if (token !== '') {
       fetchTasks(token)
-
-
     }
-  }, [])
+  }, [token])
 
   useEffect(() => {
     setNotifications([...liveNoti])
@@ -66,12 +83,15 @@ export default function TopBar({
   const getNotifications = async (userId: string) => {
     const notis = await api.notis.getAll(userId)
     dispatch(addNotification(notis))
-    setNotifications(notis)
-
-    const unreadIds = notfications.flatMap(noti => !noti.isRead ? [noti._id] : []);
-    setUnradNotis(unreadIds)
 
   }
+
+  useEffect(() => {
+    setNotifications(notiFromSlice)
+
+    const unreadIds = notiFromSlice.flatMap(noti => !noti.isRead ? [noti._id] : []);
+    setUnradNotis(unreadIds)
+  }, [notiFromSlice])
 
   const handleNotiRead = async () => {
 
@@ -94,6 +114,7 @@ export default function TopBar({
   const handleSearch = async (search: string) => {
     try {
       setSeachValue(search)
+      setShowSearchModal(true)
       const res = await api.tasks.search(search.trim())
       setSearchRes(res)
       console.log(res)
@@ -111,27 +132,32 @@ export default function TopBar({
       if (notiRef.current && !notiRef.current.contains(event.target as Node)) {
         setShowNotiView(false);
       }
+
     }
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  useEffect(() => {
-
-    const user = localStorage.getItem('user');
-    if (user) {
-      try {
-        const parsedUser = JSON.parse(user);
-        dispatch(connectSocket(parsedUser._id))
-        setUserName(parsedUser.name || '');
-        getNotifications(parsedUser._id)
-
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-      }
-    }
-  }, []);
+  //useEffect(() => {
+  //
+  //console.log("this again")
+  //const user = localStorage.getItem('user');
+  //
+  //
+  //if (user) {
+  //try {
+  //const parsedUser = JSON.parse(user);
+  //console.log(parsedUser)
+  //dispatch(connectSocket(parsedUser._id))
+  //setUserName(parsedUser.name || '');
+  //getNotifications(parsedUser._id)
+  //
+  //} catch (error) {
+  //console.error('Error parsing user data:', error);
+  //}
+  //}
+  //}, []);
 
 
 
@@ -146,16 +172,19 @@ export default function TopBar({
   };
 
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  const handleLogout = async () => {
+    await api.auth.logout()
+    dispatch(clearNotifications())
+    dispatch(clearTasks())
+    dispatch(logout())
+
     router.push('/auth/login');
   };
 
 
-  //if (noLayout) {
-  //return <>{children}</>;
-  //}
+  if (noLayout) {
+    return <>{children}</>;
+  }
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -196,16 +225,23 @@ export default function TopBar({
             <div className='flex gap-5 items-center'>
               <div className='relative'>
                 <input
+
                   className={`focus:w-[400px] border-2 px-1 border-gray-600 rounded-md focus:outline-none`}
                   onChange={(e) => handleSearch(e.target.value)}
-                //onBlur={() => setSeachValue('')}
+                  onBlur={() => setTimeout(() => setShowSearchModal(false), 100)}
                 />
                 {
-                  searchValue !== '' && (
-                    <div className='absolute bg-white p-2 top-full max-h-[60vh] right-0 w-[400px] flex flex-col gap-2'>
+                  showSearchModal && (
+                    <div className='absolute z-10 bg-white p-2 top-full max-h-[60vh] overflow-auto right-0 w-[400px] flex flex-col gap-2'>
                       {
                         searchRes && searchRes.length > 0 && searchRes.map(res => (
-                          <div className='' key={res._id}>
+                          <div
+                            onClick={() => {
+                              console.log(`/tasks/${res._id}`)
+                              router.push(`/tasks/${res._id}`)
+                              setShowSearchModal(false)
+                            }}
+                            className='cursor-pointer' key={res._id}>
                             <p className='text-sm font-semibold'>{res.title}</p>
                             <p className='text-xs font-thin'>{res.description} </p>
                           </div>
@@ -255,7 +291,7 @@ export default function TopBar({
 
                         notfications.length > 0 ?
                           notfications.map((noti, i) => (
-                            <div key={i}>
+                            <div key={noti._id}>
                               <NotiCard notifiation={noti} />
                             </div>
                           ))

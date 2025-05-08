@@ -38,7 +38,7 @@ export default function RegisterPage() {
       // Store token in localStorage
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.data.user));
-      
+
       // Redirect to dashboard
       router.push('/dashboard');
     } catch (err) {
@@ -120,7 +120,7 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          <div>
+          <div className='bg-blue-600'>
             <button
               type="submit"
               disabled={loading}

@@ -1,6 +1,7 @@
 import { api } from "@/utils/api";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
+import Link from "next/link";
 
 const priorities = ["low", "medium", "high"] as const;
 
@@ -38,25 +39,30 @@ export default async function ShowByPriorityPage() {
               </p>
             ) : (
               data[priority].map((task: any) => (
-                <div
+
+                <Link
+                  href={`/tasks/${task._id}`}
                   key={task._id}
-                  className="border border-gray-200 rounded-lg p-3 bg-gray-50 hover:bg-gray-100 transition"
                 >
-                  <h3 className="mb-2">{task.title}</h3>
-                  <p className="ml-1 text-sm text-gray-600 mb-3">
-                    {task.description || "No Description"}
-                  </p>
-                  <span
-                    className={`text-xs font-medium px-2 py-0.5 rounded-full ${getColorClasses(
-                      task.priority
-                    )}`}
+                  <div
+                    className="border border-gray-200 rounded-lg p-3 bg-gray-50 hover:bg-gray-100 transition"
                   >
-                    {task.priority}
-                  </span>
-                  <p className="ml-1 text-xs text-gray-400 mt-1">
-                    Due: {new Date(task.dueDate).toLocaleDateString()}
-                  </p>
-                </div>
+                    <h3 className="mb-2">{task.title}</h3>
+                    <p className="ml-1 text-sm text-gray-600 mb-3">
+                      {task.description || "No Description"}
+                    </p>
+                    <span
+                      className={`text-xs font-medium px-2 py-0.5 rounded-full ${getColorClasses(
+                        task.priority
+                      )}`}
+                    >
+                      {task.priority}
+                    </span>
+                    <p className="ml-1 text-xs text-gray-400 mt-1">
+                      Due: {new Date(task.dueDate).toLocaleDateString()}
+                    </p>
+                  </div>
+                </Link>
               ))
             )}
           </div>

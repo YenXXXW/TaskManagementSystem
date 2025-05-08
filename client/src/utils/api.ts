@@ -60,6 +60,22 @@ export interface LoginData {
   password: string;
 }
 
+export interface AuthResponse {
+  status: "success" | "error";
+  token: string;
+  data: {
+    user: {
+      _id: string;
+      name: string;
+      email: string;
+      role: string;
+      createdAt: string;
+      updatedAt: string;
+      __v: number;
+    };
+  }
+}
+
 export interface RegisterData {
   name: string;
   email: string;
@@ -134,8 +150,9 @@ export const api = {
   },
 
   auth: {
-    login: (data: LoginData) => api.request<{ token: string; user: { _id: string; name: string; email: string } }>('/auth/login', { method: 'POST', body: data }),
+    login: (data: LoginData) => api.request<AuthResponse>('/auth/login', { method: 'POST', body: data }),
     register: (data: RegisterData) => api.request<{ token: string; user: { _id: string; name: string; email: string } }>('/auth/register', { method: 'POST', body: data }),
+    logout: () => api.request('/auth/logout', { method: 'POST' })
   },
 
   users: {
