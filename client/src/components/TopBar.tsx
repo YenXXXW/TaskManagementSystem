@@ -42,7 +42,7 @@ export default function TopBar({
   const token = useAppSelector(state => state.user.token)
 
   const pathname = usePathname();
-  const noLayout = pathname.startsWith('/auth/login') || pathname.startsWith('/auth/signup');
+  const noLayout = pathname.startsWith('/auth/login') || pathname.startsWith('/auth/register');
 
   const fetchTasks = async (token: string) => {
 
