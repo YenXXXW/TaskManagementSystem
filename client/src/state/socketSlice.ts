@@ -2,7 +2,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { getSocket } from '../utils/socket';
 import { AppDispatch } from './store';
 import { Notification } from '@/utils/api';
-import { addTask, updateTask } from './taskSlice';
+import { addTask, deleteTasks, updateTask } from './taskSlice';
 
 interface SocketState {
   connected: boolean;
@@ -58,6 +58,12 @@ export const connectSocket = (userId: string) => (dispatch: AppDispatch) => {
         dispatch(updateTask(message.task))
       }
       dispatch(addNotification([message]));
+    });
+
+    socket.on('taskDeleted', (message: { ids: string[] }) => {
+      if (message.ids.length > 0) {
+        dispatch(deleteTasks(message.ids))
+      }
     });
   }
 };

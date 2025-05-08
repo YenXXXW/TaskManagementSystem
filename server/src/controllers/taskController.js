@@ -295,42 +295,29 @@ exports.deleteTask = async (req, res) => {
       return res.status(403).json({ message: 'You are not authorized to delete one or more tasks' });
     }
 
+    const userTaskMap = {};
+    for (const task of tasks) {
+      if (task.assignedTo && !task.assignedTo._id.equals(req.user._id)) {
+        const userId = task.assignedTo._id.toString();
+        if (!userTaskMap[userId]) {
+          userTaskMap[userId] = [];
+        }
+        userTaskMap[userId].push(task._id);
+      }
+    }
+
     await Task.deleteMany({ _id: { $in: ids } });
 
+    const io = getIO()
+
+    for (const [userId, taksIds] of Object.entries(userTaskMap)) {
 
 
-    //const assignedUser = task.assignedTo;
 
-    // Save task ID for notification before deletion
-    //const deletedTaskId = task._id;
-
-
-    {/*  
-    // Notify the assigned user if they exist
-    if (assignedUser) {
-      const notification = new Notification({
-        user: assignedUser._id,
-        type: 'taskDeleted',
-        message: `${req.user.name} deleted a task you were assigned to.`,
-        task,
-        createdBy: req.user._id,
+      io.to(userId).emit('taskDeleted', {
+        ids: taksIds
       });
-
-      await notification.save();
-
-      const populatedNotification = await Notification.findById(notification._id).populate('createdBy');
-      const io = getIO();
-      io.to(assignedUser._id.toString()).emit('taskDeleted', {
-        type: 'taskDeleted',
-        message: populatedNotification.message,
-        taskId: deletedTaskId,
-        notificationId: populatedNotification._id,
-        createdAt: populatedNotification.createdAt,
-        createdBy: populatedNotification.createdBy,
-      });
-      
     }
-*/}
     res.json({ message: 'Task deleted successfully' });
   } catch (error) {
     console.error('Error deleting task:', error);

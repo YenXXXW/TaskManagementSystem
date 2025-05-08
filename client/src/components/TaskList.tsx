@@ -5,9 +5,7 @@ import { api, Task, User, UpdateTaskData, CreateTaskData } from '@/utils/api';
 import { useRouter } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/state/hooks';
 import TaskCreateCard from './TaskCreateCard';
-import { addTask, refechTask } from '@/state/taskSlice';
-import Link from 'next/link';
-import { useSelector } from 'react-redux';
+import { refechTask } from '@/state/taskSlice';
 import { TaskCard } from './TaskCard';
 
 interface TaskListProps {
@@ -56,7 +54,7 @@ export default function TaskList({
 
 
   useEffect(() => {
-    if (tasksFromSlice.length && user) {
+    if (tasksFromSlice && user) {
       const assigned = tasksFromSlice.filter(task => (task.assignedTo?._id === user._id));
       const created = tasksFromSlice.filter(task => (task.createdBy._id === user._id));
       const overdueTasks = tasksFromSlice.filter(task => (task.isOverdue));
@@ -66,7 +64,11 @@ export default function TaskList({
     }
   }, [tasksFromSlice])
 
+  useEffect(() => {
 
+
+    console.log(assignedTasks)
+  }, [assignedTasks])
 
 
   const fetchUsers = async () => {
