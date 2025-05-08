@@ -46,7 +46,7 @@ const TaskColumn = ({ title, tasks }: { title: string; tasks: Task[] }) => (
   </div >
 )
 
-export default async function ShowByStatusPage() {
+export default function ShowByStatusPage() {
 
 
   const token = useAppSelector(state => state.user.token)

@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 
 const priorities = ["low", "medium", "high"] as const;
 
-export default async function ShowByPriorityPage() {
+export default function ShowByPriorityPage() {
   const token = useAppSelector(state => state.user.token)
   const [data, setData] = useState<GetTasksByPriorityResponse | null>(null)
 
