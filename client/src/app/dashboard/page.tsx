@@ -11,7 +11,6 @@ export default async function DashboardPage() {
     redirect('/auth/login');
   }
 
-  const tasks = await fetchTasksFromServer(token);
 
 
   return (

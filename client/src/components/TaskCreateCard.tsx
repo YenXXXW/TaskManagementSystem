@@ -1,4 +1,4 @@
-import { CreateTaskData, Task, User } from "@/utils/api";
+import { CreateTaskData, User } from "@/utils/api";
 import React, { useEffect, useRef, useState } from "react";
 import { CheckIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { useAppSelector } from "@/state/hooks";
