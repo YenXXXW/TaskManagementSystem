@@ -292,10 +292,10 @@ export function TaskCard({ task, users, handleUpdateTask, setSelectedTasks, sele
           ref={statusRef}
           className="relative flex text-sm font-semibold  space-x-2">
           {editingStatus && (
-            <div className="absolute z-50 bg-white top-full text-gray-800 rounded-md shadow-lg mt-1 w-full">
+            <div className="absolute z-50 text-sm bg-white top-full text-gray-800 rounded-md shadow-lg mt-1 w-full">
               <div
                 onClick={() => handleStatusChange('pending')}
-                className={`px-4 py-2 cursor-pointer `}
+                className={`px-4 py-2 flex cursor-pointer `}
               >
                 <span className={`mr-2 inline-block w-2 h-2 ${getStatusColor('pending')} rounded-full`}></span>
                 Pending
@@ -399,15 +399,17 @@ export function TaskCard({ task, users, handleUpdateTask, setSelectedTasks, sele
                 <div className='absolute z-50 bg-white top-full text-gray-800 rounded-md shadow-lg mt-1 w-full'>
 
                   {
-                    users.map(user => (
-                      <span
-                        key={user._id}
-                        onClick={() => handleAssingeeChange(user)}
-                        className='my-2 block hover:bg-green-50'
-                      >
-                        {user.name}
-                      </span>
-                    ))
+                    users
+                      .filter(user => user._id !== currentUser?._id)
+                      .map(user => (
+                        <span
+                          key={user._id}
+                          onClick={() => handleAssingeeChange(user)}
+                          className="my-2 block hover:bg-green-50"
+                        >
+                          {user.name}
+                        </span>
+                      ))
                   }
                 </div>
 

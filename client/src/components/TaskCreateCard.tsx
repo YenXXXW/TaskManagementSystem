@@ -1,6 +1,7 @@
 import { CreateTaskData, Task, User } from "@/utils/api";
 import React, { useEffect, useRef, useState } from "react";
 import { CheckIcon, XMarkIcon } from '@heroicons/react/24/solid';
+import { useAppSelector } from "@/state/hooks";
 
 
 interface newTask {
@@ -27,6 +28,7 @@ export default function TaskCreateCard({ task, users, setNewTask, handleCreateTa
   const [editingPriority, setEditingPrority] = useState(false);
   const [editingDueDate, setEditingDueDate] = useState(false)
   const [editingAssignee, setEditingAssignee] = useState(false)
+  const currentUser = useAppSelector(state => state.user.user)
 
   const dateInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -208,7 +210,7 @@ export default function TaskCreateCard({ task, users, setNewTask, handleCreateTa
           )}
           <span
             onClick={() => setEditingPrority(true)}
-            className={`px-2 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
+            className={`px-2 cursor-pointer py-0.5 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
             {task.priority}
           </span>
         </div>
@@ -242,15 +244,17 @@ export default function TaskCreateCard({ task, users, setNewTask, handleCreateTa
               <div className='absolute z-50 bg-white top-full text-gray-800 rounded-md shadow-lg mt-1 w-full'>
 
                 {
-                  users.map(user => (
-                    <span
-                      key={user._id}
-                      onClick={() => handleAssingeeChange(user)}
-                      className='my-2 block hover:bg-green-50'
-                    >
-                      {user.name}
-                    </span>
-                  ))
+                  users
+                    .filter(user => user._id !== currentUser?._id)
+                    .map(user => (
+                      <span
+                        key={user._id}
+                        onClick={() => handleAssingeeChange(user)}
+                        className="my-2 block hover:bg-green-50"
+                      >
+                        {user.name}
+                      </span>
+                    ))
                 }
               </div>
 

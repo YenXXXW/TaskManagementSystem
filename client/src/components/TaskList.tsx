@@ -106,7 +106,7 @@ export default function TaskList({
       setNewTask({
         title: '',
         description: '',
-        dueDate: '',
+        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toString(),
         status: 'pending',
         priority: 'medium',
         assignedTo: '',
