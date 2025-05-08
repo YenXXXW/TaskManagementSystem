@@ -8,6 +8,7 @@ export default async function TasksPage() {
     const cookieStore = await cookies();
     const token = cookieStore.get('token')?.value;
 
+
     if (!token) {
       redirect('/auth/login');
     }
