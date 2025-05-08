@@ -76,7 +76,6 @@ exports.createTask = async (req, res) => {
       createdBy: req.user._id,
     });
 
-    console.log('created task', task)
 
     let assignedUser = null;
     if (assignedTo && assignedTo.trim() !== '') {
@@ -329,7 +328,6 @@ exports.deleteTask = async (req, res) => {
 exports.searchTasks = async (req, res) => {
   try {
     const { search } = req.query;
-    console.log("search string", search)
 
     const query = {};
 

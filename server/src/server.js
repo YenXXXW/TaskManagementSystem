@@ -21,7 +21,6 @@ io.on('connection', (socket) => {
 app.use(cookieParser());
 
 app.get('/api', (req, res) => {
-  console.log(req.cookies)
   res.setHeader('Content-Type', 'application/json');
   res.status(200).json({ message: 'Welcome to Task Management System API' });
 });

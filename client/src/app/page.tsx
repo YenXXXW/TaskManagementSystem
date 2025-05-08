@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import { useEffect, useState } from 'react';
 import { useAppDispatch } from '@/state/hooks';
 import { login } from '@/state/userSlice';
-import { User } from '@/utils/api';
+import { AuthResponse, User } from '@/utils/api';
 
 
 export default function Home() {
@@ -13,13 +13,23 @@ export default function Home() {
 
   const [parsedUser, setParsedUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState('')
 
   useEffect(() => {
     const user = localStorage.getItem('user');
-    if (user) {
+    const token = localStorage.getItem('token')
+    if (user && token) {
       const parsed = JSON.parse(user);
-      dispatch(login(parsed));
+      const obj: AuthResponse = {
+        status: 'success',
+        token: token,
+        data: {
+          user: parsed
+        }
+      }
+      dispatch(login(obj));
       setParsedUser(parsed);
+      setToken(token)
     }
     setLoading(false);
   }, [dispatch]);
@@ -32,7 +42,7 @@ export default function Home() {
       </div>
     )
   }
-  if (!parsedUser) {
+  if (!parsedUser || token === '') {
     return (
       redirect('/auth/login')
     )
