@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
-import { api } from '@/utils/api';
 import TaskStats from '@/components/TaskStats';
 
 export default async function DashboardPage() {
