@@ -1,3 +1,5 @@
+'use client'
+
 import BoardToggle from "./BoardToggle";
 import ShowByStatusPage from "./showByStatus";
 import ShowByPriorityPage from "./showByPriority";
