@@ -4,15 +4,6 @@ import { CheckIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { useAppSelector } from "@/state/hooks";
 
 
-interface newTask {
-  title: string;
-  description: string;
-  dueDate: string;
-  status: "pending" | "in-progress" | "completed";
-  priority: "low" | "medium" | "high";
-  assignedTo: string;
-
-}
 
 interface TaskCreateCardProps {
   task: CreateTaskData

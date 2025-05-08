@@ -2,7 +2,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { api, Task, UpdateTaskData, User } from '@/utils/api';
-import { format } from 'date-fns';
 import { ClockIcon, FlagIcon, UserIcon } from '@heroicons/react/24/outline';
 import { useAppSelector } from '@/state/hooks';
 import { CheckIcon, XMarkIcon } from '@heroicons/react/24/solid';

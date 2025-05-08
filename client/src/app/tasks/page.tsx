@@ -14,12 +14,6 @@ export default async function TasksPage() {
 
     const tasks = await api.tasks.getAll(token);
 
-    const stats = {
-      total: tasks.length,
-      completed: tasks.filter(task => task.status === 'completed').length,
-      inProgress: tasks.filter(task => task.status === 'in-progress').length,
-      pending: tasks.filter(task => task.status === 'pending').length,
-    };
 
     return (
       <div className="min-h-screen bg-gray-100">

@@ -1,4 +1,3 @@
-import { api } from "@/utils/api"
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import BoardToggle from "./BoardToggle";
@@ -15,8 +14,6 @@ export default async function BoardPage({ searchParams }: { searchParams: { view
   }
 
 
-  const { pending, inProgress, completed
-  } = await api.tasks.getByStatus({ token })
 
   return (
     <div>
