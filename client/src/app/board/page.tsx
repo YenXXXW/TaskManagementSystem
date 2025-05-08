@@ -1,24 +1,30 @@
-'use client'
+import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
+import BoardToggle from "./BoardToggle";
+import ShowByStatusPage from "./showByStatus";
+import ShowByPriorityPage from "./showByPriority";
 
-import { useRouter } from 'next/navigation';
-import BoardToggle from './BoardToggle';
-import ShowByStatusPage from './showByStatus';
-import ShowByPriorityPage from './showByPriority';
-import { useAppSelector } from '@/state/hooks';
+export default async function BoardPage({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
+  const { view } = await searchParams
+  const cookieStore = await cookies();
+  const token = cookieStore.get('token')?.value;
+  if (!token) {
 
-export default function BoardPage({ searchParams }: { searchParams: { view?: string } }) {
-  const view = searchParams.view || 'status';
-  const router = useRouter();
-  const token = useAppSelector(state => state.user.token)
-
-  if (token === '') {
-    router.push('/auth/login');
+    redirect('/auth/login')
   }
+
+
 
   return (
     <div>
       <BoardToggle />
-      {view === 'priority' ? <ShowByPriorityPage /> : <ShowByStatusPage />}
+
+      {view === 'priority' ? (
+        <ShowByPriorityPage />
+      ) : (
+        <ShowByStatusPage />
+      )}
     </div>
-  );
+  )
 }
+
