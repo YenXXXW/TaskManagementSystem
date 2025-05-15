@@ -30,9 +30,9 @@ export default function LoginPage() {
 
       console.log(response)
 
-      dispatch(login(response))
 
       // Store token in localStorage
+      dispatch(login(response))
 
       // Redirect to dashboard
       router.push('/dashboard');

@@ -1,7 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ClientProvider from "@/components/clientProvider";
-import TopBar from "@/components/TopBar";
+//import TopBar from "@/components/TopBar";
 import { cookies } from 'next/headers';
 
 const geistSans = Geist({
@@ -24,6 +24,8 @@ export default async function RootLayout({
   const cookieStore = await cookies();
   const token = cookieStore.get('token')?.value;
 
+  console.log('token', token)
+
 
   return (
     <html lang="en">
@@ -31,9 +33,7 @@ export default async function RootLayout({
         className={`bg-gray-100 ${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ClientProvider>
-          <TopBar token={token || ''} >
-            {children}
-          </TopBar>
+          {children}
         </ClientProvider>
       </body>
     </html>

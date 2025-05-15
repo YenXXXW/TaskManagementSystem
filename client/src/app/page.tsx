@@ -42,13 +42,8 @@ export default function Home() {
       </div>
     )
   }
-  if (!parsedUser || token === '') {
-    return (
-      redirect('/auth/login')
-    )
-  }
-
   return (
-    redirect('/dashboard')
-  );
+    redirect('/login')
+  )
+
 }
