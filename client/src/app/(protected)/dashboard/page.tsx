@@ -1,9 +1,6 @@
 import TaskStats from '@/components/TaskStats';
 
-export default function DashboardPage() {
-
-
-
+export default async function DashboardPage() {
 
 
   return (

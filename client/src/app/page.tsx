@@ -14,7 +14,6 @@ export default function Home() {
   const [parsedUser, setParsedUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState('')
-  console.log(parsedUser, token)
 
   useEffect(() => {
     const user = localStorage.getItem('user');
